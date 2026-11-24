@@ -23,7 +23,7 @@ async function signed(over: Partial<RemoteUiManifest> = {}) {
 describe('remote ui manifest', () => {
   it('signs the same text as the website build script', () => {
     const text = signedText({ api: 1, version: 'v', file: 'f', sha256: 's', css: 'c', cssSha256: 'cs', builtAt: 'b', sig: null })
-    expect(text).toBe('millida-launcher-ui/1\n1\nv\nf\ns\nc\ncs\nb')
+    expect(text).toBe('mcpc-launcher-ui/1\n1\nv\nf\ns\nc\ncs\nb')
   })
 
   it('accepts a valid signature', async () => {
@@ -63,8 +63,8 @@ describe('remote ui manifest', () => {
     expect(await verifyManifest(outside.m, outside.key)).toBe(false)
   })
 
-  it('ships a 32-byte public key', () => {
-    expect(Buffer.from(REMOTE_UI_PUBLIC_KEY, 'base64').length).toBe(32)
+  it('does not bundle the original publisher remote-UI signing key', () => {
+    expect(REMOTE_UI_PUBLIC_KEY).toBe('')
   })
 })
 
