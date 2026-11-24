@@ -88,13 +88,13 @@ async fn download_head_service(nick: &str, px: u32) -> Result<Vec<u8>, String> {
 /// Head rendered from the CustomSkinAPI skin, i.e. the same source
 /// CustomSkinLoader reads in game.
 async fn download_millida(nick: &str, px: u32) -> Result<Vec<u8>, String> {
-    let meta = get_json(&format!("{}/yggdrasil/csl/{}", MCPC_API_BASE, nick)).await?;
+    let meta = get_json(&format!("{}/yggdrasil/csl/{}", MCPC_API_BASE.trim_end_matches("/"), nick)).await?;
     let hash = meta["skins"]["default"]
         .as_str()
         .or_else(|| meta["skins"]["slim"].as_str())
         .ok_or("у игрока нет скина MCPC")?;
     let res = client()
-        .get(format!("{}/yggdrasil/csl/textures/{}", MCPC_API_BASE, hash))
+        .get(format!("{}/yggdrasil/csl/textures/{}", MCPC_API_BASE.trim_end_matches("/"), hash))
         .send()
         .await
         .map_err(|e| e.to_string())?;
