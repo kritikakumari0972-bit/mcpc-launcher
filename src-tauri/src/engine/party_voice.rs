@@ -1,9 +1,5 @@
-// Party voice: the launcher gets a ticket from api.millida.net and connects over UDP to the Millida voice relay (domains millida.host and millida.net).
-// The microphone opens only after you join a party. Sound goes to the Millida relay inside the ticket session. Nothing is injected into Minecraft.
-//! Party voice in the lobby over the Millida voice relay, the same room the
-//! game's mod joins under the same player id. The webview names only a party
-//! and its members; the ticket, the secret and the relay address stay here.
-
+// Optional party voice. Relay domains are supplied by MCPC at build time.
+// The default is empty: an unconfigured build cannot contact the original publisher's voice relays.
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -11,11 +7,11 @@ use std::sync::{mpsc, Arc, Mutex};
 use std::time::Duration;
 
 use base64::Engine as _;
-use millida_voice::client::{Config, Events, VoiceClient};
-use millida_voice::dsp::{Noise, Processing};
-use millida_voice::link::Session;
-use millida_voice::party::{party_voice_player, valid_party_id};
-use millida_voice::wire::{parse_uuid, Uuid};
+use mcpc_voice::client::{Config, Events, VoiceClient};
+use mcpc_voice::dsp::{Noise, Processing};
+use mcpc_voice::link::Session;
+use mcpc_voice::party::{party_voice_player, valid_party_id};
+use mcpc_voice::wire::{parse_uuid, Uuid};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{AppHandle, Emitter};
@@ -216,13 +212,20 @@ fn iso_millis(s: &str) -> Option<i64> {
     Some(((days * 24 + h) * 60 + mi) * 60_000 + sec * 1000 + ms)
 }
 
-/// Relay hosts the client will talk to; the ticket answer names one of them.
-// We accept a voice relay only from Millida domains, so a server answer cannot point the sound at a foreign address. Below is a check that the address is not on a local network.
-const RELAY_DOMAINS: [&str; 2] = ["millida.host", "millida.net"];
+/// Comma-separated MCPC-owned voice relay domains. Empty means voice stays disabled.
+const MCPC_VOICE_RELAY_DOMAINS: &str = match option_env!("MCPC_VOICE_RELAY_DOMAINS") {
+    Some(domains) => domains,
+    None => "",
+};
 
-fn relay_host_allowed(host: &str) -> bool {
+/// Exact domain-boundary matching prevents a ticket from redirecting the client to an unrelated host.
+fn relay_host_allowed(host: &str, configured_domains: &str) -> bool {
     let host = host.trim_end_matches('.').to_ascii_lowercase();
-    RELAY_DOMAINS.iter().any(|d| host == *d || host.ends_with(&format!(".{d}")))
+    configured_domains
+        .split(',')
+        .map(|d| d.trim().trim_end_matches('.').to_ascii_lowercase())
+        .filter(|d| !d.is_empty() && d.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'.' || c == b'-'))
+        .any(|d| host == d || host.ends_with(&format!(".{d}")))
 }
 
 /// Defence in depth behind the host allowlist: the client must never be aimed
@@ -280,7 +283,7 @@ fn public_v6(ip: &Ipv6Addr) -> bool {
         || seg[0] == 0x0100)
 }
 
-fn parse_ticket(v: &Value) -> Result<(Ticket, String, u16), String> {
+fn parse_ticket(v: &Value, configured_domains: &str) -> Result<(Ticket, String, u16), String> {
     let broken = || "Сервис голоса прислал неполный билет".to_string();
     let b64 = |key: &str| {
         v.get(key)
@@ -296,7 +299,7 @@ fn parse_ticket(v: &Value) -> Result<(Ticket, String, u16), String> {
     if host.is_empty() || host.len() > 253 || !host.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'.' || c == b'-') {
         return Err(broken());
     }
-    if !relay_host_allowed(&host) {
+    if !relay_host_allowed(&host, configured_domains) {
         return Err("Сервис голоса назвал чужой сервер голоса — подключение отменено".into());
     }
     let port = v.get("port").and_then(Value::as_u64).and_then(|p| u16::try_from(p).ok()).filter(|p| *p > 0).ok_or_else(broken)?;
@@ -328,9 +331,9 @@ fn parse_ticket(v: &Value) -> Result<(Ticket, String, u16), String> {
 
 async fn fetch_ticket(party: &str) -> Result<Ticket, String> {
     let body = serde_json::json!({ "party": party });
-    // Ticket request to api.millida.net/v2/voice/ticket with the account token. The answer has the relay address and the session secret, they stay in the core.
+    // Ticket request to the configured MCPC API /voice/ticket with the account token. The answer has the relay address and the session secret, they stay in the core.
     let v = millida_api_auth("/voice/ticket".into(), "POST".into(), Some(body)).await?;
-    let (mut ticket, host, port) = parse_ticket(&v)?;
+    let (mut ticket, host, port) = parse_ticket(&v, MCPC_VOICE_RELAY_DOMAINS)?;
     let resolved = tauri::async_runtime::spawn_blocking(move || {
         (host.as_str(), port).to_socket_addrs().map(|it| it.filter(|a| public_ip(&a.ip())).collect::<Vec<_>>())
     })
@@ -365,7 +368,7 @@ pub async fn join(app: AppHandle, party: String, members: Vec<String>, audio: Au
         let client = VoiceClient::start(config, events)?;
         match rx.recv_timeout(CONNECT_WAIT) {
             Ok(()) => Ok(client),
-            Err(_) => Err("Сервер голоса Millida не ответил за 8 секунд".into()),
+            Err(_) => Err("Сервер голоса MCPC не ответил за 8 секунд".into()),
         }
     })
     .await
@@ -465,15 +468,15 @@ mod tests {
     #[test]
     fn relay_host_must_be_ours() {
         let cases = [
-            ("voice.millida.host", true, "the production relay"),
-            ("millida.host", true, "the apex itself"),
-            ("VOICE.Millida.NET.", true, "case and a trailing dot change nothing"),
-            ("millida.host.evil.com", false, "our name as a prefix of someone else's domain"),
-            ("evilmillida.host", false, "a suffix without the dot boundary"),
+            ("voice.mcpc.example", true, "the production relay"),
+            ("mcpc.example", true, "the apex itself"),
+            ("VOICE.MCPC.NET.", true, "case and a trailing dot change nothing"),
+            ("mcpc.example.evil.com", false, "our name as a prefix of someone else's domain"),
+            ("evilmcpc.example", false, "a suffix without the dot boundary"),
             ("localhost", false, "anything outside our domains"),
         ];
         for (host, ok, why) in cases {
-            assert_eq!(relay_host_allowed(host), ok, "{host}: {why}");
+            assert_eq!(relay_host_allowed(host, "mcpc.example"), ok, "{host}: {why}");
         }
     }
 
@@ -529,13 +532,13 @@ mod tests {
     #[test]
     fn only_complete_group_tickets_are_accepted() {
         let good = serde_json::json!({
-            "ticket": "AQID", "secret": "AAECAwQFBgcICQoLDA0ODw==", "host": "voice.millida.host", "port": 14997,
+            "ticket": "AQID", "secret": "AAECAwQFBgcICQoLDA0ODw==", "host": "voice.mcpc.example", "port": 14997,
             "playerUuid": "c48ce4c8-7fc7-4eea-ac8a-c1e128115cff", "keepAlive": 1000, "mtu": 1024,
             "expiresAt": "2026-10-09T13:00:00.000Z", "now": "2026-10-09T12:00:00.000Z", "group": true,
             "addresses": ["9.9.9.9", "10.0.0.1"]
         });
-        let (t, host, port) = parse_ticket(&good).expect("a full group ticket parses");
-        assert_eq!((host.as_str(), port), ("voice.millida.host", 14997));
+        let (t, host, port) = parse_ticket(&good, "mcpc.example").expect("a full group ticket parses");
+        assert_eq!((host.as_str(), port), ("voice.mcpc.example", 14997));
         assert_eq!(t.lifetime, Duration::from_secs(3600));
         assert_eq!(t.relay.len(), 1, "the private literal is dropped");
         for (key, value) in [
