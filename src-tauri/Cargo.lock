@@ -2751,8 +2751,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "millida-launcher"
-version = "2.0.0"
+name = "mcpc-launcher"
+version = "2.10.0"
 dependencies = [
  "aes-gcm",
  "base64 0.22.1",
@@ -2768,7 +2768,7 @@ dependencies = [
  "lewton",
  "libc",
  "md-5",
- "millida-voice",
+ "mcpc-voice",
  "minisign-verify",
  "objc2",
  "objc2-app-kit",
@@ -2806,7 +2806,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "millida-voice"
+name = "mcpc-voice"
 version = "0.1.0"
 dependencies = [
  "aes-gcm",
