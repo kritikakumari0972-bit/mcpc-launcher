@@ -242,11 +242,11 @@ fn avoid_colrv1_fonts_on_appimage() {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // `millida-launcher --version`: answers and exits before any window or webview. Release CI runs it on
+    // `mcpc-launcher --version`: answers and exits before any window or webview. Release CI runs it on
     // the binary unpacked from every Linux package, so a package whose binary the loader cannot even map
     // (2.2.0–2.7.0: zeros behind a valid ELF header, SIGSEGV in ld.so) fails the build instead of shipping.
     if std::env::args().nth(1).as_deref() == Some("--version") {
-        println!("{}", env!("MILLIDA_VERSION"));
+        println!("{}", env!("MCPC_VERSION"));
         return;
     }
     if engine::uninstall_report_requested() {
@@ -258,7 +258,7 @@ pub fn run() {
     // ready (engine::mark_frontend_ready): a new exe that cannot even open leaves the old one to go back to.
     // Before the builder: Tauri creates the window from its config before our setup runs, and a
     // WebView2 that fails there panics with nobody listening (engine::install_panic_hook).
-    engine::install_panic_hook(env!("MILLIDA_VERSION").to_string());
+    engine::install_panic_hook(env!("MCPC_VERSION").to_string());
     engine::wait_for_parent();
     cli::remember_startup_args();
     #[cfg(target_os = "linux")]
