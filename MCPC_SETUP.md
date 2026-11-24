@@ -24,6 +24,7 @@ This fork is deliberately separated from the original launcher's infrastructure.
 | VITE_MCPC_REMOTE_UI_BASE_URL | MCPC remote UI bundle root | https://ui.mcpc.example/launcher-ui |
 | VITE_MCPC_REMOTE_UI_SITE | Allowed origin for MCPC remote UI | https://mcpc.example |
 | VITE_MCPC_REMOTE_UI_PUBLIC_KEY | MCPC Ed25519 public key (base64) | Empty (remote UI disabled) |
+| VITE_MCPC_TELEMETRY_ENABLED | Enable optional usage telemetry | false |
 
 The .example hostname is reserved and is not a working API. It prevents an unconfigured fork from contacting the original publisher. Set MCPC_API_BASE_URL, MCPC_MS_CLIENT_ID, MCPC_DISCORD_APP_ID and MCPC_VOICE_RELAY_DOMAINS in the shell before compiling the Rust core; VITE_MCPC_API_BASE_URL is read by Vite.
 
@@ -46,6 +47,10 @@ The upstream publisher's mod feed, CDN, signing key and kill-switch URL are not 
 Discord server-join links are disabled until MCPC_JOIN_URL_PREFIX is set to your own HTTPS join-page prefix at compile time. MCPC profile links stay hidden until an MCPC profile base is implemented.
 
 Party voice is disabled until MCPC_VOICE_RELAY_DOMAINS is set at compile time to domains owned and operated by MCPC. The client accepts only those exact domains and their subdomains, and continues to reject local/private IP addresses. Do not add upstream publisher relay domains.
+
+## Telemetry
+
+Usage telemetry and heartbeat uploads are disabled by default for this independent build. Enable VITE_MCPC_TELEMETRY_ENABLED=true only after the MCPC API endpoint, privacy notice and opt-out behavior are in place.
 
 ## Remote website UI
 
