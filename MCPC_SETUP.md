@@ -11,6 +11,7 @@ This fork is deliberately separated from the original launcher's infrastructure.
 | MCPC_MS_CLIENT_ID | MCPC Microsoft Entra application ID | Not configured |
 | MCPC_DISCORD_APP_ID | MCPC Discord Rich Presence application ID | Not configured |
 | MCPC_VOICE_RELAY_DOMAINS | Comma-separated MCPC-owned voice relay domains | Empty (voice disabled) |
+| MCPC_JOIN_URL_PREFIX | MCPC-owned HTTPS join-page URL prefix | Empty (join button disabled) |
 | VITE_MCPC_UPDATES_ENABLED | Enable own signed update feed | false |
 
 The .example hostname is reserved and is not a working API. It prevents an unconfigured fork from contacting the original publisher. Set MCPC_API_BASE_URL, MCPC_MS_CLIENT_ID, MCPC_DISCORD_APP_ID and MCPC_VOICE_RELAY_DOMAINS in the shell before compiling the Rust core; VITE_MCPC_API_BASE_URL is read by Vite.
@@ -26,6 +27,8 @@ Do not point the MCPC client at another publisher's API. The API host must use H
 Create an MCPC-owned Microsoft Entra application and set MCPC_MS_CLIENT_ID at compile time. The launcher uses Microsoft device-code sign-in and sends the user to Microsoft's own sign-in page; it does not collect the password.
 
 ## Party voice
+
+Discord server-join links are disabled until MCPC_JOIN_URL_PREFIX is set to your own HTTPS join-page prefix at compile time. MCPC profile links stay hidden until an MCPC profile base is implemented.
 
 Party voice is disabled until MCPC_VOICE_RELAY_DOMAINS is set at compile time to domains owned and operated by MCPC. The client accepts only those exact domains and their subdomains, and continues to reject local/private IP addresses. Do not add upstream publisher relay domains.
 
