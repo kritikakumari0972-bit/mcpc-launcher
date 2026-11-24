@@ -466,11 +466,12 @@ mod tests {
     }
 
     #[test]
-    fn relay_host_must_be_ours() {
+    fn relay_host_must_be_configured_for_mcpc() {
+        assert!(!relay_host_allowed("voice.mcpc.example", ""), "no configured domain means voice is disabled");
         let cases = [
-            ("voice.mcpc.example", true, "the production relay"),
+            ("voice.mcpc.example", true, "the configured relay"),
             ("mcpc.example", true, "the apex itself"),
-            ("VOICE.MCPC.NET.", true, "case and a trailing dot change nothing"),
+            ("VOICE.MCPC.EXAMPLE.", true, "case and a trailing dot change nothing"),
             ("mcpc.example.evil.com", false, "our name as a prefix of someone else's domain"),
             ("evilmcpc.example", false, "a suffix without the dot boundary"),
             ("localhost", false, "anything outside our domains"),
@@ -550,7 +551,7 @@ mod tests {
         ] {
             let mut bad = good.clone();
             bad[key] = value;
-            assert!(parse_ticket(&bad).is_err(), "{key}: a half-valid ticket would only fail later at the relay");
+            assert!(parse_ticket(&bad, "mcpc.example").is_err(), "{key}: a half-valid ticket would only fail later at the relay");
         }
     }
 }
