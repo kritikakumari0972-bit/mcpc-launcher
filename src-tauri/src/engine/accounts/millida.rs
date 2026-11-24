@@ -5,7 +5,7 @@ use crate::engine::*;
 use serde_json::Value;
 
 /// Must be a root-level /v2 endpoint, for example https://api.example.org/v2.
-pub pub const MCPC_API_BASE: &str = match option_env!("MCPC_API_BASE_URL") {
+pub const MCPC_API_BASE: &str = match option_env!("MCPC_API_BASE_URL") {
     Some(url) => url,
     None => "https://api.mcpc.example/v2",
 };
