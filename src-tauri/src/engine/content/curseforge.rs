@@ -1,4 +1,4 @@
-// Search and install from CurseForge. Requests go through the Millida proxy (api.millida.net/v2/launcher/cf, the API key lives there). Fallback is the public mirror api.curse.tools.
+// Search and install from CurseForge. The optional MCPC backend proxy keeps the API key server-side; api.curse.tools is the public fallback.
 // Files are downloaded from forgecdn.net and checked against the sha1 from the API answer.
 use super::cf_memo::{cf_memo, cf_memo_key, proxy_verdict, ProxyVerdict};
 use crate::engine::*;
@@ -8,12 +8,12 @@ use tauri::AppHandle;
 
 /// CurseForge requests go through the backend proxy so the API key stays
 /// server-side; the public keyless mirror is the fallback.
-// Main path: our proxy. The CurseForge key stays on the Millida server.
+// Main path: our proxy. The CurseForge key stays on the MCPC server.
 pub(crate) fn cf_base() -> String {
-    format!("{}/launcher/cf", MILLIDA_API)
+    format!("{}/launcher/cf", MCPC_API_BASE.trim_end_matches('/'))
 }
 
-// The fallback mirror api.curse.tools is a third-party public service, not Millida. It gets the same request (search, project id), no tokens are added. Used only if the Millida proxy did not answer.
+// The fallback mirror api.curse.tools is a third-party public service, not MCPC. It gets the same request (search, project id), no tokens are added. Used only if the MCPC proxy did not answer.
 pub(crate) const CF_MIRROR: &str = "https://api.curse.tools";
 
 pub(crate) async fn cf_get(path: &str, q: &[(String, String)]) -> Result<Value, String> {
@@ -1105,7 +1105,7 @@ mod throttle_tests {
 
     #[test]
     fn a_rate_limit_is_told_in_minutes_without_addresses() {
-        let raw = "X.jar (https://api.millida.net/v2/launcher/dl?url=https%3A%2F%2Fedge.forgecdn.net%2Fx → 429 Too Many Requests; Retry-After: 90)";
+        let raw = "X.jar (https://api.mcpc.example/v2/launcher/dl?url=https%3A%2F%2Fedge.forgecdn.net%2Fx → 429 Too Many Requests; Retry-After: 90)";
         let text = cf_throttled_text(raw);
         assert!(text.contains("2 мин"), "{text}");
         assert!(!text.contains("http"), "no URL reaches the player: {text}");
