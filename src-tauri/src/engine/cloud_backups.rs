@@ -25,7 +25,7 @@ const PROGRESS_EVENT: &str = "cloud-backup-progress";
 
 pub const CLOUD_TRANSFER_CANCELLED: &str = "Передача отменена";
 const NEED_PLUS: &str = "Облачные бэкапы миров доступны с PLUS";
-const NEED_LOGIN: &str = "Войди в аккаунт Millida, чтобы хранить миры в облаке";
+const NEED_LOGIN: &str = "Войди в аккаунт MCPC, чтобы хранить миры в облаке";
 const UNREACHABLE: &str = "Облако сейчас недоступно из твоей сети — попробуй позже или через другую сеть";
 /// The API hands out presigned addresses of this storage and nothing else.
 const STORAGE_SUFFIX: &str = ".r2.cloudflarestorage.com";
@@ -519,7 +519,7 @@ mod tests {
     fn only_named_https_storage_is_reachable() {
         let cases = [
             ("https://acc1.r2.cloudflarestorage.com/millida-catalog/launcher-world-backups/k?X-Amz-Signature=1", true, "a presigned R2 address"),
-            ("https://api.millida.net/v2/launcher/cloud-backups/x/blob", false, "only the storage host is opened, not any host the API names"),
+            ("https://api.mcpc.example/v2/launcher/cloud-backups/x/blob", false, "only the storage host is opened, not any host the API names"),
             ("https://r2.cloudflarestorage.com/b/k", false, "the bare suffix is not an account host"),
             ("https://evil.com/.r2.cloudflarestorage.com/b", false, "the suffix must be the host, not the path"),
             ("https://acc.r2.cloudflarestorage.com.evil.com/b", false, "a lookalike host that only contains the suffix"),
