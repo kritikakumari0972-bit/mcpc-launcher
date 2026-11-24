@@ -523,13 +523,13 @@ fn write_settings(dir: &Path, licensed: bool) -> Result<(), String> {
         .and_then(|v| v.as_object().cloned())
         .unwrap_or_default();
     cfg.insert("apiRoot".into(), Value::String(MCPC_API_BASE.to_string()));
-    // Millida, потом файлы игрока. Лицензионный профиль спрашиваем последним и
+    // MCPC, потом файлы игрока. Лицензионный профиль спрашиваем последним и
     // только если аккаунт и правда мояновский: иначе этот ник там принадлежит
     // постороннему, и игрок увидит чужой скин.
     let order: Vec<Value> = if licensed {
         ["mcpc", "local", "mojang"].iter().map(|s| Value::String((*s).into())).collect()
     } else {
-        ["millida", "local"].iter().map(|s| Value::String((*s).into())).collect()
+        ["mcpc", "local"].iter().map(|s| Value::String((*s).into())).collect()
     };
     cfg.insert("sourceOrder".into(), Value::Array(order));
     cfg.insert("allowNameLookup".into(), Value::Bool(false));
@@ -537,7 +537,7 @@ fn write_settings(dir: &Path, licensed: bool) -> Result<(), String> {
     if let Some(list) = hosts.as_array_mut() {
         // The same hosts the launcher shows textures from: head and skin renders and the CustomSkinAPI
         // redirect live on api.mcpc.example, wardrobe uploads on cdn.mcpc.example (skins/library.rs TEXTURE_HOSTS).
-        for host in ["mcpc.example", "cdn.mcpc.example", "api.mcpc.example", "cdn.cdn.mcpc.example", "cdn.mcpc.example", "textures.minecraft.net"] {
+        for host in ["api.mcpc.example", "cdn.mcpc.example", "textures.minecraft.net"] {
             if !list.iter().any(|h| h.as_str() == Some(host)) {
                 list.push(Value::String(host.into()));
             }
