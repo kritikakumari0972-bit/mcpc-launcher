@@ -70,6 +70,14 @@ const MIME: Record<string, string> = {
 export default defineConfig(({ mode }) => {
   // Тестовая Милли (milli-server): адрес и токен только из .env.local, в сборку не попадают.
   const env = loadEnv(mode, process.cwd(), 'MILLI_TEST_')
+  const mcpcEnv = loadEnv(mode, process.cwd(), 'VITE_')
+  const apiBase = mcpcEnv.VITE_MCPC_API_BASE_URL || 'https://api.mcpc.example/v2'
+  let apiOrigin: string
+  try {
+    apiOrigin = new URL(apiBase).origin
+  } catch {
+    throw new Error('VITE_MCPC_API_BASE_URL must be an absolute HTTPS URL ending in /v2')
+  }
   return {
   plugins: [react(), oldWebKitCss(), devCosmeticModels(), devMedia(), bundledMedia()],
   clearScreen: false,
@@ -99,14 +107,14 @@ export default defineConfig(({ mode }) => {
             },
           }
         : {}),
-      // Website screens (src/lib/remoteUi.ts) from a local millida-web dev server; set m-ui-base to change.
+      // Website screens (src/lib/remoteUi.ts) from a local MCPC web app; set m-ui-base to change.
       '/mlu-site': {
         target: process.env.MLU_SITE || 'http://127.0.0.1:3037',
         changeOrigin: true,
         rewrite: (p: string) => p.replace(/^\/mlu-site/, ''),
       },
       '/papi': {
-        target: 'https://api.millida.net',
+        target: apiOrigin,
         changeOrigin: true,
         secure: true,
         rewrite: (p) => p.replace(/^\/papi/, ''),
