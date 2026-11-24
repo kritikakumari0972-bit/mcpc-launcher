@@ -1,12 +1,12 @@
 // Installs the MCPC mod (skins, cosmetics) into the player's modpacks and updates it.
-// The version list comes from cdn.mcpc.example/mod, the jar is downloaded from there and checked against the sha256 from the list. The list is also signed with the Millida key. The list of blocked versions is api.mcpc.example/v2/launcher/mod/blocked.
+// The version list comes from cdn.mcpc.example/mod, the jar is downloaded from there and checked against the sha256 from the list. The list is verified with the MCPC-configured signing key. The list of blocked versions is api.mcpc.example/v2/launcher/mod/blocked.
 // Can be turned off in settings. Mod summaries are switched off by the statistics switch.
 use crate::engine::*;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-// Mod version list on the Millida CDN.
+// Mod version list on the MCPC-configured CDN.
 const MANIFEST_URL: &str = match option_env!("MCPC_MOD_MANIFEST_URL") { Some(v) => v, None => "https://cdn.mcpc.example/mod/variants.json" };
 // Mod version list of the testing channel, read only when the player opted into test versions.
 const BETA_MANIFEST_URL: &str = match option_env!("MCPC_MOD_BETA_MANIFEST_URL") { Some(v) => v, None => "https://cdn.mcpc.example/mod/beta.json" };
@@ -184,7 +184,7 @@ fn signed_jar_sha256s(manifests: impl Iterator<Item = Value>) -> std::collection
 /// Открытая часть ключа, которым CI мода (millida-mod, scripts/manifest_canonical.py)
 /// подписывает список вариантов: сервер или CDN без закрытой части не может
 /// подсунуть в игру другой jar — его sha256 стоит в подписанной строке.
-// Public minisign key in base64 (it contains the text "minisign public key"). The private part is kept in the mod CI and is not in this repository.
+// Public minisign key in base64 (it contains the text "minisign public key"). The private part must be kept in MCPC's own protected mod CI and is not in this repository.
 const MOD_MANIFEST_PUBKEY: &str = match option_env!("MCPC_MOD_MANIFEST_PUBKEY") { Some(v) => v, None => "" };
 #[cfg(test)]
 const TEST_MOD_MANIFEST_PUBKEY: &str = "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDBCMjA5MkFGRDhCODAzOEMKUldTTUE3allyNUlnQ3haTTFKZnlLcjExcFIybGRjVlMrSzNvQzZiQjNLbVY2cEJUVW5lUXZNdDAK";
