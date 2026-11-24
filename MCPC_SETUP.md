@@ -12,6 +12,11 @@ This fork is deliberately separated from the original launcher's infrastructure.
 | MCPC_DISCORD_APP_ID | MCPC Discord Rich Presence application ID | Not configured |
 | MCPC_VOICE_RELAY_DOMAINS | Comma-separated MCPC-owned voice relay domains | Empty (voice disabled) |
 | MCPC_JOIN_URL_PREFIX | MCPC-owned HTTPS join-page URL prefix | Empty (join button disabled) |
+| MCPC_MOD_MANIFEST_URL | MCPC signed cosmetics-mod manifest | .example (disabled) |
+| MCPC_MOD_BETA_MANIFEST_URL | MCPC beta mod manifest | .example (disabled) |
+| MCPC_MOD_BLOCKED_URL | MCPC mod kill-switch endpoint | .example (disabled) |
+| MCPC_MOD_BASE_URL | MCPC mod artifact base URL | .example (disabled) |
+| MCPC_MOD_MANIFEST_PUBKEY | MCPC minisign public key (base64 text wrapper) | Empty (mod installs fail closed) |
 | VITE_MCPC_UPDATES_ENABLED | Enable own signed update feed | false |
 | VITE_MCPC_REMOTE_UI_ENABLED | Enable remote signed MCPC screens | false |
 | VITE_MCPC_REMOTE_UI_BASE_URL | MCPC remote UI bundle root | https://ui.mcpc.example/launcher-ui |
@@ -29,6 +34,10 @@ Do not point the MCPC client at another publisher's API. The API host must use H
 ## Microsoft login
 
 Create an MCPC-owned Microsoft Entra application and set MCPC_MS_CLIENT_ID at compile time. The launcher uses Microsoft device-code sign-in and sends the user to Microsoft's own sign-in page; it does not collect the password.
+
+## Optional cosmetics mod
+
+The upstream publisher's mod feed, CDN, signing key and kill-switch URL are not used. The mod installer fails closed until all MCPC-owned manifest/CDN/kill-switch URLs and a matching minisign public key are supplied at compile time. The default .example hosts are reserved and intentionally unavailable.
 
 ## Party voice
 
