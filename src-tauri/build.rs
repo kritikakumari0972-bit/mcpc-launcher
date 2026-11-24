@@ -53,7 +53,27 @@ fn set(identifier: &str, description: &str, cmds: &[String]) -> String {
 const MAIN_THREAD_STACK: usize = 8 * 1024 * 1024;
 
 fn main() {
-    println!("cargo:rerun-if-env-changed=MCPC_MS_CLIENT_ID");
+    // These values are embedded by option_env! in the core. Rebuild when any changes,
+    // otherwise Cargo could silently keep a binary with the previous service configuration.
+    for name in [
+        "MCPC_API_BASE_URL",
+        "MCPC_CATALOG_DOWNLOAD_HOSTS",
+        "MCPC_DISCORD_APP_ID",
+        "MCPC_JOIN_URL_PREFIX",
+        "MCPC_MOD_BASE_URL",
+        "MCPC_MOD_BETA_MANIFEST_URL",
+        "MCPC_MOD_BLOCKED_URL",
+        "MCPC_MOD_MANIFEST_PUBKEY",
+        "MCPC_MOD_MANIFEST_URL",
+        "MCPC_MS_CLIENT_ID",
+        "MCPC_PACK_HOST",
+        "MCPC_PACK_ICON_HOST",
+        "MCPC_TEXTURE_HOSTS",
+        "MCPC_TEXTURE_HOST_SUFFIXES",
+        "MCPC_VOICE_RELAY_DOMAINS",
+    ] {
+        println!("cargo:rerun-if-env-changed={name}");
+    }
     // media.rs reads it with option_env!: a release build with MEDIA_REMOTE=1 must not reuse an object built without it.
     println!("cargo:rerun-if-env-changed=MEDIA_REMOTE");
     println!("cargo:rerun-if-changed=src/lib.rs");
