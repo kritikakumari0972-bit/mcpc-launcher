@@ -1,4 +1,4 @@
-// Player heads for lists and the profile. The nickname goes to api.millida.net (skin and head render), ready PNGs are cached on disk.
+// Player heads for lists and the profile. The nickname and requested image size go to the configured MCPC API; ready PNGs are cached on disk.
 // No tokens are sent.
 use super::library::as_data_url;
 use crate::engine::*;
@@ -7,7 +7,6 @@ use std::time::{Duration, SystemTime};
 
 // Player head avatars, cached on disk so repeat views are instant and offline.
 
-const HEAD_URL: &str = "https://api.millida.net/v2/heads/avatar/";
 const HEAD_PX: u32 = 64;
 /// A face is 8x8 skin pixels: only a multiple of 8 gives every pixel the same
 /// width on screen, anything else renders the face torn.
@@ -73,8 +72,8 @@ fn prune(dir: &std::path::Path) {
 
 /// The nick is already sanitized, so it cannot inject a path into the URL.
 async fn download_head_service(nick: &str, px: u32) -> Result<Vec<u8>, String> {
-    let url = format!("{}{}?size={}", HEAD_URL, nick, px);
-    // GET to api.millida.net/v2/heads/avatar/<nickname>: only the nickname and the size are sent.
+    let url = format!("{}/heads/avatar/{}?size={}", MCPC_API_BASE.trim_end_matches("/"), nick, px);
+    // GET to the configured MCPC API: only the nickname and the requested size are sent.
     let res = client().get(url).send().await.map_err(|e| e.to_string())?;
     if !res.status().is_success() {
         return Err(format!("сервис голов ответил {}", res.status().as_u16()));
@@ -89,18 +88,18 @@ async fn download_head_service(nick: &str, px: u32) -> Result<Vec<u8>, String> {
 /// Head rendered from the CustomSkinAPI skin, i.e. the same source
 /// CustomSkinLoader reads in game.
 async fn download_millida(nick: &str, px: u32) -> Result<Vec<u8>, String> {
-    let meta = get_json(&format!("{}/yggdrasil/csl/{}", MILLIDA_API, nick)).await?;
+    let meta = get_json(&format!("{}/yggdrasil/csl/{}", MCPC_API_BASE, nick)).await?;
     let hash = meta["skins"]["default"]
         .as_str()
         .or_else(|| meta["skins"]["slim"].as_str())
-        .ok_or("у игрока нет скина Millida")?;
+        .ok_or("у игрока нет скина MCPC")?;
     let res = client()
-        .get(format!("{}/yggdrasil/csl/textures/{}", MILLIDA_API, hash))
+        .get(format!("{}/yggdrasil/csl/textures/{}", MCPC_API_BASE, hash))
         .send()
         .await
         .map_err(|e| e.to_string())?;
     if !res.status().is_success() {
-        return Err(format!("скин Millida недоступен ({})", res.status().as_u16()));
+        return Err(format!("скин MCPC недоступен ({})", res.status().as_u16()));
     }
     let bytes = read_capped(res, 2_000_000).await.map_err(|_| "скин слишком большой".to_string())?;
     tokio::task::spawn_blocking(move || head_from_skin(&bytes, px))
