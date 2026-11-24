@@ -68,8 +68,8 @@ const MIME: Record<string, string> = {
 }
 
 export default defineConfig(({ mode }) => {
-  // Тестовая Милли (milli-server): адрес и токен только из .env.local, в сборку не попадают.
-  const env = loadEnv(mode, process.cwd(), 'MILLI_TEST_')
+  // Optional MCPC test backend: its address and token come only from local .env files.
+  const env = loadEnv(mode, process.cwd(), 'MCPC_TEST_')
   const mcpcEnv = loadEnv(mode, process.cwd(), 'VITE_')
   const apiBase = mcpcEnv.VITE_MCPC_API_BASE_URL || 'https://api.mcpc.example/v2'
   let apiOrigin: string
@@ -81,7 +81,7 @@ export default defineConfig(({ mode }) => {
       !parsedApiBase.password &&
       !parsedApiBase.search &&
       !parsedApiBase.hash &&
-      parsedApiBase.pathname.replace(/\\/+$/, '') === '/v2'
+      parsedApiBase.pathname.replace(/\/+$/, '') === '/v2'
     if (!validApiBase) throw new Error('invalid API root')
     apiOrigin = parsedApiBase.origin
   } catch {
@@ -106,13 +106,13 @@ export default defineConfig(({ mode }) => {
     // Телеметрию и heartbeat глушим — локальный запуск не должен попадать
     // в онлайн лаунчера в админке. Подробно — docs/LOCAL-DEV.md.
     proxy: {
-      ...(env.MILLI_TEST_URL
+      ...(env.MCPC_TEST_URL
         ? {
-            '/milli-test': {
-              target: env.MILLI_TEST_URL,
+            '/mcpc-test': {
+              target: env.MCPC_TEST_URL,
               changeOrigin: true,
-              rewrite: (p: string) => p.replace(/^\/milli-test/, ''),
-              headers: { 'X-Milli-Token': env.MILLI_TEST_TOKEN ?? '' },
+              rewrite: (p: string) => p.replace(/^\/mcpc-test/, ''),
+              headers: { 'X-MCPC-Test-Token': env.MCPC_TEST_TOKEN ?? '' },
             },
           }
         : {}),
