@@ -143,6 +143,9 @@ fn pick_channel(stable: Result<Value, String>, beta: Option<Value>) -> Result<Va
 }
 
 async fn channel_manifest(channel: &Channel, source: ManifestSource) -> Result<Value, String> {
+    if MOD_MANIFEST_PUBKEY.trim().is_empty() {
+        return Err("MCPC cosmetics manifest signing key is not configured".into());
+    }
     let copy = data_dir().join(channel.copy);
     let m = match source {
         ManifestSource::Fresh => get_json_revalidated(channel.url, &copy).await,
