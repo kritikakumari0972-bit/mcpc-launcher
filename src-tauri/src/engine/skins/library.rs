@@ -158,12 +158,12 @@ pub fn save_texture(kind: &str, name: &str, data: &str, slim: bool) -> Result<Ve
 }
 
 /// Public content hosts that do not depend on an MCPC account or deployment.
-const TEXTURE_HOSTS: &[&str] = &["textures.minecraft.net", "cdn.modrinth.com"];
+const TEXTURE_HOSTS: &[&str] = &["textures.minecraft.net", "cdn.modrinth.com", "api.mcpc.example", "cdn.mcpc.example"];
 
 /// MCPC-controlled texture hosts are supplied at build time as comma-separated
 /// exact hosts and optional DNS suffixes. No upstream publisher hosts are trusted.
 const MCPC_TEXTURE_HOSTS: &str = match option_env!("MCPC_TEXTURE_HOSTS") { Some(v) => v, None => "" };
-const MCPC_TEXTURE_HOST_SUFFIXES: &str = match option_env!("MCPC_TEXTURE_HOST_SUFFIXES") { Some(v) => v, None => "" };
+const MCPC_TEXTURE_HOST_SUFFIXES: &str = match option_env!("MCPC_TEXTURE_HOST_SUFFIXES") { Some(v) => v, None => "mcpc.example" };
 
 fn host_in_configured_list(host: &str, list: &str, suffix: bool) -> bool {
     list.split(',')
