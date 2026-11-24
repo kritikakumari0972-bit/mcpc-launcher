@@ -163,7 +163,8 @@ function afterQuiet(run: () => void) {
   setTimeout(attempt, QUIET_FIRST_MS)
 }
 
-// Updates stay off until MCPC has its own signed release feed and signing key. Never query the original publisher's feed.\nconst updatesAllowed = () => hasTauri() && !import.meta.env.DEV && import.meta.env.VITE_MCPC_UPDATES_ENABLED === 'true'
+// Updates stay off until MCPC has its own signed release feed and signing key. Never query the original publisher's feed.
+const updatesAllowed = () => hasTauri() && !import.meta.env.DEV && import.meta.env.VITE_MCPC_UPDATES_ENABLED === 'true'
 
 /// Flatpak updates itself and mounts /app read-only, so the fallback channel cannot install there.
 let managedOutside: boolean | null = null
