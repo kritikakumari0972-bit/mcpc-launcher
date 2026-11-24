@@ -13,6 +13,10 @@ This fork is deliberately separated from the original launcher's infrastructure.
 | MCPC_VOICE_RELAY_DOMAINS | Comma-separated MCPC-owned voice relay domains | Empty (voice disabled) |
 | MCPC_JOIN_URL_PREFIX | MCPC-owned HTTPS join-page URL prefix | Empty (join button disabled) |
 | VITE_MCPC_UPDATES_ENABLED | Enable own signed update feed | false |
+| VITE_MCPC_REMOTE_UI_ENABLED | Enable remote signed MCPC screens | false |
+| VITE_MCPC_REMOTE_UI_BASE_URL | MCPC remote UI bundle root | https://ui.mcpc.example/launcher-ui |
+| VITE_MCPC_REMOTE_UI_SITE | Allowed origin for MCPC remote UI | https://mcpc.example |
+| VITE_MCPC_REMOTE_UI_PUBLIC_KEY | MCPC Ed25519 public key (base64) | Empty (remote UI disabled) |
 
 The .example hostname is reserved and is not a working API. It prevents an unconfigured fork from contacting the original publisher. Set MCPC_API_BASE_URL, MCPC_MS_CLIENT_ID, MCPC_DISCORD_APP_ID and MCPC_VOICE_RELAY_DOMAINS in the shell before compiling the Rust core; VITE_MCPC_API_BASE_URL is read by Vite.
 
@@ -31,6 +35,10 @@ Create an MCPC-owned Microsoft Entra application and set MCPC_MS_CLIENT_ID at co
 Discord server-join links are disabled until MCPC_JOIN_URL_PREFIX is set to your own HTTPS join-page prefix at compile time. MCPC profile links stay hidden until an MCPC profile base is implemented.
 
 Party voice is disabled until MCPC_VOICE_RELAY_DOMAINS is set at compile time to domains owned and operated by MCPC. The client accepts only those exact domains and their subdomains, and continues to reject local/private IP addresses. Do not add upstream publisher relay domains.
+
+## Remote website UI
+
+Remote screens remain disabled until MCPC publishes its own bundle, creates its own Ed25519 signing keypair, and sets the base URL, site origin and 32-byte public key. Set VITE_MCPC_REMOTE_UI_ENABLED=true only after those values are configured. Never use the original publisher's public key or remote site.
 
 ## Updates
 
