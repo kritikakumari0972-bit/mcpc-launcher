@@ -1,109 +1,110 @@
-# How to build Millida Launcher yourself
+# Build MCPC Launcher
 
-Russian version: [BUILDING.ru.md](BUILDING.ru.md)
+This guide builds the current MCPC Launcher source checkout. The first build downloads Rust and frontend dependencies and may take a while.
 
-Three commands. The first build takes 10–20 minutes, depending on your computer. Later builds are faster: Rust rebuilds only what changed.
+## 1. Prerequisites
 
-## 1. Install the tools
+### Windows 10/11
 
-<details open>
-<summary><b>Windows 10/11</b></summary>
+Open PowerShell:
 
-In PowerShell:
+    winget install --id Git.Git -e
+    winget install --id Oven-sh.Bun -e
+    winget install --id Rustlang.Rustup -e
+    winget install --id Microsoft.VisualStudio.2022.BuildTools -e --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
 
-```powershell
-winget install --id Git.Git -e
-winget install --id Oven-sh.Bun -e
-winget install --id Rustlang.Rustup -e
-winget install --id Microsoft.VisualStudio.2022.BuildTools -e --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
-```
+Restart PowerShell after installation. Windows needs the Microsoft C++ build tools and WebView2 runtime.
 
-After the install, close PowerShell and open it again. Otherwise it will not see `bun` and `cargo`.
+### macOS
 
-Windows 11 and most supported Windows 10 versions include WebView2. For a
-development machine without it, [install the Runtime from Microsoft](https://developer.microsoft.com/microsoft-edge/webview2/).
-When the Runtime is missing, the Windows installer built from this source downloads
-Microsoft's bootstrapper and installs it (`src-tauri/installer-hooks.nsh`). A failure there
-does not stop the launcher install.
-</details>
+    xcode-select --install
+    curl -fsSL https://bun.sh/install | bash
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-<details>
-<summary><b>macOS</b></summary>
+### Debian/Ubuntu Linux
 
-```bash
-xcode-select --install
-curl -fsSL https://bun.sh/install | bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
-</details>
+    sudo apt-get install -y git curl libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libxdo-dev libssl-dev build-essential file wget
+    curl -fsSL https://bun.sh/install | bash
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-<details>
-<summary><b>Linux (Debian, Ubuntu, Mint)</b></summary>
+Other distributions need the equivalent Tauri system packages.
 
-```bash
-sudo apt-get install -y git curl libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libxdo-dev libssl-dev build-essential file wget
-curl -fsSL https://bun.sh/install | bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
+## 2. Get the source
 
-For other distributions, see the package names in the [Tauri docs](https://tauri.app/start/prerequisites/#linux).
-</details>
+    git clone https://github.com/kritikakumari0972-bit/mcpc-launcher.git
+    cd mcpc-launcher
+    bun install
 
-## 2. Build
+## 3. Configure your own services
 
-```bash
-git clone https://github.com/millida/launcher.git
-cd launcher
-bun install
-bun run tauri build
-```
+Do not use credentials, application IDs, API domains or update-signing keys belonging to another launcher.
 
-To build exactly the version that was released on the site, switch to its tag before you build:
+### Microsoft sign-in
 
-```bash
-git checkout v2.0.177
-```
+Register an application for MCPC in Microsoft Entra ID and set its application (client) ID before compiling the Rust core.
 
-The list of versions is on the [releases](https://github.com/millida/launcher/releases) page.
+PowerShell:
 
-## 3. Get the result
+    $env:MCPC_MS_CLIENT_ID = "YOUR_MCPC_MICROSOFT_APPLICATION_ID"
 
-| System | Where it is |
+macOS/Linux:
+
+    export MCPC_MS_CLIENT_ID="YOUR_MCPC_MICROSOFT_APPLICATION_ID"
+
+Without this value, Microsoft sign-in returns a clear configuration error instead of using another publisher's ID.
+
+### MCPC API
+
+The backend is a separate component and is not included yet. Set both variables to your own HTTPS API root ending in /v2:
+
+    export MCPC_API_BASE_URL="https://api.your-domain.example/v2"
+    export VITE_MCPC_API_BASE_URL="https://api.your-domain.example/v2"
+
+For Vite browser development, these values can also be placed in .env.local. The Tauri CSP in src-tauri/tauri.conf.json must explicitly allow your API origin under both production and development connect-src lists.
+
+The default is https://api.mcpc.example/v2, a reserved example address. Backend-dependent account, social, proxy and website features remain unavailable until your backend implements their API contracts.
+
+### Discord Rich Presence (optional)
+
+Set MCPC_DISCORD_APP_ID to an application ID created for MCPC. Without it, Rich Presence remains inactive.
+
+### Automatic updates
+
+Automatic update checks are intentionally disabled. Enable them only after you have:
+1. Published an MCPC update manifest and platform artifacts.
+2. Generated an MCPC-only signing keypair.
+3. Kept the private key outside the repository and stored it as a protected release secret.
+4. Added the matching public key and HTTPS endpoint to src-tauri/tauri.conf.json.
+
+Do not copy another publisher's key or endpoint. VITE_MCPC_UPDATES_ENABLED is off by default.
+
+## 4. Run in development
+
+    bun run build:web
+    bun run tauri dev
+
+For the browser-only Vite preview:
+
+    bun run dev
+
+## 5. Build installers
+
+    bun run tauri build
+
+Expected output folders:
+
+| Platform | Output |
 | --- | --- |
-| Windows | `src-tauri\target\release\bundle\nsis\Millida Launcher_<version>_x64-setup.exe` |
-| macOS | `src-tauri/target/release/bundle/dmg/` and `bundle/macos/Millida Launcher.app` |
-| Linux | `src-tauri/target/release/bundle/`: `deb/`, `rpm/`, `appimage/` |
+| Windows | src-tauri/target/release/bundle/nsis/ |
+| macOS | src-tauri/target/release/bundle/dmg/ and bundle/macos/ |
+| Linux | src-tauri/target/release/bundle/deb/, rpm/ and appimage/ |
 
-To run it straight from the source without installing: `bun run tauri dev`.
+Build artifacts are unsigned unless you configure your own platform signing certificates. Do not describe an unsigned build as publisher-verified.
 
-## How your build differs from ours
+## 6. Checks
 
-| | Your build | From millida.net |
-| --- | --- | --- |
-| Code | The same as in this repository | The same. Every release here is the commit the installer was built from |
-| Digital signature | None. Windows shows "Unknown publisher" | Yes. No developer publishes the signing key: with it, anyone could release a virus in our name |
-| Version | `2.0.0` | The build number, for example `2.0.177` |
-| Updates | On first start the launcher updates itself to the official version | Installed automatically |
+    bun run typecheck
+    bun run test
+    bun run build:web:release
 
-To stay on your own build, change `"version": "2.0.0"` to `"version": "99.0.0"` in [`src-tauri/tauri.conf.json`](src-tauri/tauri.conf.json) before `bun run tauri build`. With a number higher than ours, the update will not touch your build.
-
-Updates are checked with the signature key from [`tauri.conf.json`](src-tauri/tauri.conf.json) (`plugins.updater.pubkey`). The launcher will not install a swapped file.
-
-## How to check the official installer
-
-- Download only from [millida.net/launcher](https://millida.net/launcher) or from the [releases](https://github.com/millida/launcher/releases) page. Anything else is not ours.
-- Windows: right-click the file, then "Properties", then "Digital Signatures", then "This digital signature is OK".
-- To check that a release file was built here, from this code: the [Release workflow](.github/workflows/release.yml) builds every installer on GitHub servers, and GitHub signs which commit it came from. Check with `gh attestation verify <file> -R millida/launcher`. Or download `provenance.sigstore.json` from the release and add `--bundle provenance.sigstore.json`.
-- The VirusTotal report for every installer is at [millida.net/launcher/antivirus](https://millida.net/launcher/antivirus).
-
-## If the build fails
-
-| Error | What to do |
-| --- | --- |
-| `linker 'link.exe' not found` | The C++ Build Tools are missing. Use the Windows command from step 1 |
-| `bun` or `cargo` "is not recognized as a command" | Restart the terminal after the install |
-| `webkit2gtk-4.1 not found` | The Linux packages from step 1 are not installed |
-| AppImage fails on `linuxdeploy` | Build without it: `bun run tauri build --bundles deb` |
-| Something else | [Open an issue](https://github.com/millida/launcher/issues/new/choose) and attach the command output |
-
-Want to send a fix? See [CONTRIBUTING.md](CONTRIBUTING.md). Want a fork under your own name? See [TRADEMARK.md](TRADEMARK.md).
+The full Rust test suite can be run from src-tauri with cargo test --workspace.
