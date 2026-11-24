@@ -1,9 +1,14 @@
-// Requests to the Millida API (api.millida.net/v2) and the Millida account session: login, token refresh, file upload.
-// The Millida token goes into the Authorization header only for api.millida.net. Microsoft and Ely.by tokens never get here.
+// Requests to the optional MCPC API and its account session: login, token refresh and file upload.
+// The API host is configured at build time with MCPC_API_BASE_URL. The default is a reserved
+// .example address, so an unconfigured fork never sends player data to the original publisher.
 use crate::engine::*;
 use serde_json::Value;
 
-pub const MILLIDA_API: &str = "https://api.millida.net/v2";
+/// Must be a root-level /v2 endpoint, for example https://api.example.org/v2.
+pub pub const MCPC_API_BASE: &str = match option_env!("MCPC_API_BASE_URL") {
+    Some(url) => url,
+    None => "https://api.mcpc.example/v2",
+};
 
 /// The API `message` field is either a string or a list of validator messages.
 pub fn api_error_message(text: &str) -> Option<String> {
@@ -46,7 +51,7 @@ fn api_url(path: &str) -> Result<url::Url, String> {
     if segments.split(['/', '\\']).any(is_dot_segment) {
         return Err("bad path".into());
     }
-    let base = url::Url::parse(&format!("{}/", MILLIDA_API)).map_err(|_| "bad path".to_string())?;
+    let base = url::Url::parse(&format!("{}/", MCPC_API_BASE.trim_end_matches('/'))).map_err(|_| "bad path".to_string())?;
     let resolved = base.join(&path[1..]).map_err(|_| "bad path".to_string())?;
     let same_origin = resolved.scheme() == base.scheme()
         && resolved.host() == base.host()
@@ -281,7 +286,7 @@ pub async fn millida_api_in(
             "PUT" => c.put(url),
             _ => c.delete(url),
         };
-        // The Millida account token is added to the header. The address above is always api.millida.net.
+        // The Millida account token is added to the header. The address above is always api.mcpc.example.
         if let Some(t) = token.as_ref() {
             req = req.header("Authorization", format!("Bearer {}", t));
         }
@@ -953,9 +958,9 @@ fn cookie_value(header: &str, name: &str) -> Option<String> {
 /// Returns (access, next refresh). The rotated refresh token arrives only in a
 /// Set-Cookie header; missing it trips server-side reuse detection, which
 /// invalidates the whole token family.
-// Session refresh: the refresh token goes to api.millida.net, the new one comes back in the rt2 cookie.
+// Session refresh: the refresh token goes to api.mcpc.example, the new one comes back in the rt2 cookie.
 pub async fn millida_refresh(refresh_token: &str) -> Result<(String, String), String> {
-    refresh_at(MILLIDA_API, refresh_token, [client(), spare_client()], REFRESH_ATTEMPT).await
+    refresh_at(MCPC_API_BASE.trim_end_matches('/'), refresh_token, [client(), spare_client()], REFRESH_ATTEMPT).await
 }
 
 /// The server answers a spent refresh token with a fresh pair only for 60 s
@@ -1075,7 +1080,7 @@ mod tests {
 
     use super::{
         api_url, etag_key, insufficient_funds_detail, lang_header, tz_header, login_poll_answer, market_header, refresh_on_cooldown, remember_in, repeatable, webview_path_allowed, set_refresh_cooldown,
-        upload_route_allowed, verdict_for, without_refresh_token, mod_token_of, ModToken, RefreshVerdict, Refreshed, Tagged, ETAG_CACHE_BUDGET, MILLIDA_API, UNAUTHORIZED,
+        upload_route_allowed, verdict_for, without_refresh_token, mod_token_of, ModToken, RefreshVerdict, Refreshed, Tagged, ETAG_CACHE_BUDGET, MCPC_API_BASE, UNAUTHORIZED,
     };
     use std::collections::BTreeMap;
 
@@ -1127,7 +1132,7 @@ mod tests {
 
     #[test]
     fn a_remembered_answer_is_replayed_only_to_its_own_account_and_address() {
-        let url = "https://api.millida.net/v2/cosmetics/catalog";
+        let url = "https://api.mcpc.example/v2/cosmetics/catalog";
         let alice = "token-alice".to_string();
         let bob = "token-bob".to_string();
         let mut cache: BTreeMap<String, Tagged> = BTreeMap::new();
@@ -1137,7 +1142,7 @@ mod tests {
             (Some(&alice), url, Some("\"v1\""), "the same session asks again and gets a 304 instead of 1.4 MB"),
             (Some(&bob), url, None, "another account must never see a personal answer cached for the first one"),
             (None, url, None, "a signed-out call is a different audience from a signed-in one"),
-            (Some(&alice), "https://api.millida.net/v2/cosmetics/owned", None, "one address never answers for another"),
+            (Some(&alice), "https://api.mcpc.example/v2/cosmetics/owned", None, "one address never answers for another"),
         ];
         for (account, address, expected, why) in cases {
             let got = cache.get(&etag_key(account, address, None, None, None)).map(|t| t.etag.as_str());
@@ -1393,7 +1398,7 @@ mod tests {
         let url = api_url("/core/list?page=1&limit=20").expect("a normal endpoint must be accepted");
         assert_eq!(
             url.as_str(),
-            format!("{}/core/list?page=1&limit=20", MILLIDA_API),
+            format!("{}/core/list?page=1&limit=20", MCPC_API_BASE),
             "the resolved URL must match what plain concatenation produced before, \
              otherwise existing callers would start hitting different endpoints",
         );
