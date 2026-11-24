@@ -1,5 +1,5 @@
-// Screens shipped from the website: millida.net/launcher-ui serves a signed JS/CSS bundle built from the
-// millida-web repo. Network: only GET of the manifest and two files from that folder, nothing is sent.
+// Optional MCPC-hosted website screens: an MCPC-owned signed JS/CSS bundle.
+// Remote execution is disabled by default until MCPC configures its own origin and Ed25519 key.
 // Disk: the last verified bundle is kept in IndexedDB so a screen opens instantly and offline.
 // Code runs only after the Ed25519 signature and the sha256 of every file match; a bundle that crashes is skipped.
 // The module is split: the core (ui.js and the chunks it imports statically) is fetched with the manifest, every
