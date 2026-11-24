@@ -149,6 +149,7 @@ function uuid(): string {
 }
 
 export function telemetryEnabled(): boolean {
+  if (import.meta.env.VITE_MCPC_TELEMETRY_ENABLED !== 'true') return false
   try {
     return localStorage.getItem(OPT_OUT_KEY) !== '1'
   } catch {
