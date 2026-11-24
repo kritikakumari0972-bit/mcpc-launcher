@@ -242,7 +242,7 @@ fn worker(generation: u64, rx: Receiver<Job>) {
                 let slug = lock(&LAST_SLUG).clone();
                 let presence = Presence {
                     details: "In launcher".into(),
-                    state: "Millida Launcher".into(),
+                    state: "MCPC Launcher".into(),
                     profile_slug: slug,
                     ..Presence::default()
                 };
@@ -330,7 +330,11 @@ fn handshake(c: &mut DiscordIpcClient, id: &str) -> Result<String, Box<dyn std::
     Ok(val["data"]["user"]["id"].as_str().unwrap_or_default().to_string())
 }
 
-const JOIN_PREFIX: &str = "https://millida.net/join?";
+/// MCPC-owned join page prefix. Empty means the Discord join button is hidden.
+const JOIN_PREFIX: &str = match option_env!("MCPC_JOIN_URL_PREFIX") {
+    Some(prefix) => prefix,
+    None => "",
+};
 
 /// `large_image` may be an https URL: Discord proxies external images itself.
 /// `join_url` replaces the download button while the player is on a server; it is
@@ -355,13 +359,13 @@ fn apply(client: &mut Option<DiscordIpcClient>, since: &mut Option<i64>, p: &Pre
     }
 
     let big = if p.large_image.starts_with("https://") { p.large_image.as_str() } else { "logo" };
-    let big_text = if p.large_text.is_empty() { "Millida Launcher" } else { p.large_text.as_str() };
-    let join_ok = p.playing && p.join_url.starts_with(JOIN_PREFIX) && p.join_url.len() <= 512;
+    let big_text = if p.large_text.is_empty() { "MCPC Launcher" } else { p.large_text.as_str() };
+    let join_ok = !JOIN_PREFIX.is_empty() && p.playing && p.join_url.starts_with(JOIN_PREFIX) && p.join_url.len() <= 512;
     let profile = profile_url(&p.profile_slug);
     // Presence is read by people of every language, so it stays English whatever the launcher's UI language.
     let join_label = "Join server";
     let download_label = "Download launcher";
-    let profile_label = "Millida profile";
+    let profile_label = "MCPC profile";
     let small_text = if p.playing { "In game" } else { "In launcher" };
     let buttons = if join_ok {
         vec![
@@ -373,7 +377,7 @@ fn apply(client: &mut Option<DiscordIpcClient>, since: &mut Option<i64>, p: &Pre
             activity::Button::new(download_label, SITE_URL),
             match profile.as_deref() {
                 Some(url) => activity::Button::new(profile_label, url),
-                None => activity::Button::new("Discord Millida", DISCORD_URL),
+                None => activity::Button::new("Discord MCPC", DISCORD_URL),
             },
         ]
     };
@@ -424,11 +428,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn profile_button_points_only_at_our_profile_page() {
+    fn profile_button_stays_disabled_until_mcpc_profile_base_exists() {
         let cases: [(&str, Option<&str>); 7] = [
-            ("danielgrash", Some("https://millida.net/u/danielgrash")),
+            ("danielgrash", None),
             ("DanielGrash", Some("https://millida.net/u/danielgrash")),
-            ("some_nick-2", Some("https://millida.net/u/some_nick-2")),
+            ("some_nick-2", None),
             ("", None),
             ("../admin", None),
             ("a b", None),
