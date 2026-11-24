@@ -15,7 +15,7 @@ pub const MCPC_API_BASE: &str = match option_env!("MCPC_API_BASE_URL") {
 fn api_base_from(raw: &str) -> Result<url::Url, String> {
     let mut base = url::Url::parse(raw.trim_end_matches('/'))
         .map_err(|_| "MCPC_API_BASE_URL must be an HTTPS URL ending in /v2".to_string())?;
-    let valid = base.scheme() == "https:"
+    let valid = base.scheme() == "https"
         && base.host().is_some()
         && base.username().is_empty()
         && base.password().is_none()
