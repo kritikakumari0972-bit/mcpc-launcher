@@ -42,7 +42,7 @@ jobs:
       - name: Tests
         run: bun run test
 
-      # Built without MILLIDA_MS_CLIENT_ID, which also proves the fallback path works.
+      # Built without MCPC_MS_CLIENT_ID, which also proves the fallback path works.
       - name: Build web
         run: bun run build:web
 
