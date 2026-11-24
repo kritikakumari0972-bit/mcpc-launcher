@@ -1,5 +1,5 @@
 // Launcher update. The check goes through the Tauri plugin. The version list address and the public part of the signing key are set in tauri.conf.json.
-// Install only with a Millida signature. Fallback: the core downloads the update itself (updateFallback*). Details: SAFETY.md.
+// Install only with an MCPC signature. Fallback: the core downloads the update itself (updateFallback*). Details: SAFETY.md.
 import { check, type Update } from '@tauri-apps/plugin-updater'
 import { exit, relaunch } from '@tauri-apps/plugin-process'
 import { hasTauri, tauri } from '../ipc/tauri'
@@ -429,7 +429,7 @@ const TRANSLOCATED_RE = /запущен из образа/i
 
 function noticeIfTranslocated(e: unknown): boolean {
   if (!TRANSLOCATED_RE.test(String(e))) return false
-  showToast(t('Лаунчер запущен из образа. Перенеси Millida в «Программы» — иначе обновления не установятся'), 'error')
+  showToast(t('Лаунчер запущен из образа. Перенеси MCPC Launcher в «Программы» — иначе обновления не установятся'), 'error')
   return true
 }
 
