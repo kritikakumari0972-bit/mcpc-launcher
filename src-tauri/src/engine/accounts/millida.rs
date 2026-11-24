@@ -286,7 +286,7 @@ pub async fn millida_api_in(
             "PUT" => c.put(url),
             _ => c.delete(url),
         };
-        // The Millida account token is added to the header. The address above is always api.mcpc.example.
+        // The MCPC account token is added to the header. The address above is always api.mcpc.example.
         if let Some(t) = token.as_ref() {
             req = req.header("Authorization", format!("Bearer {}", t));
         }
@@ -413,8 +413,8 @@ fn insufficient_funds_detail(text: &str) -> Option<String> {
     Some(detail.to_string())
 }
 
-pub const SEC_MILLIDA: &str = "millida";
-pub const SEC_MILLIDA_REFRESH: &str = "millida-refresh";
+pub const SEC_MILLIDA: &str = "mcpc";
+pub const SEC_MILLIDA_REFRESH: &str = "mcpc-refresh";
 /// Sessions issued before the refresh flow existed were stored under this name.
 pub const SEC_MILLIDA_LEGACY: &str = "mc";
 /// Tells the frontend that a failed refresh means the session is over.
@@ -457,7 +457,7 @@ fn keep_pair(access: &str, refresh: &str) {
     match save_pair(access, refresh) {
         Ok(()) => set_unsaved_pair(None),
         Err(e) => {
-            eprintln!("[auth] новая сессия Millida не записана на диск, держим её в памяти до следующей попытки: {e}");
+            eprintln!("[auth] новая сессия MCPC не записана на диск, держим её в памяти до следующей попытки: {e}");
             set_unsaved_pair(Some((access.to_string(), refresh.to_string())));
         }
     }
@@ -467,7 +467,7 @@ fn keep_pair(access: &str, refresh: &str) {
 /// (POST /launcher/mod-session). Полный токен аккаунта в окружение игры не
 /// уходит: его прочитал бы любой мод сборки (аудит 24.09.2026). Ручка не
 /// ответила — мод работает без входа (каталог и косметика на игроках видны и так).
-// A separate narrow token for the Millida mod in the game (cosmetics only, 12 hours). The full account token is not passed to the game.
+// A separate narrow token for the MCPC mod in the game (cosmetics only, 12 hours). The full account token is not passed to the game.
 pub async fn mod_session_token(budget: std::time::Duration) -> ModToken {
     if millida_token().is_none() {
         return ModToken::NoSession;
@@ -484,7 +484,7 @@ pub async fn mod_session_token(budget: std::time::Duration) -> ModToken {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModToken {
     Issued(String),
-    /// Nobody is signed in to Millida: nothing was lost.
+    /// Nobody is signed in to MCPC: nothing was lost.
     NoSession,
     Failed,
 }
@@ -606,7 +606,7 @@ async fn refresh_session(used: Option<String>) -> Refreshed {
         Err(e) => match verdict_for(&e) {
             RefreshVerdict::SessionOver => {
                 if let Err(e) = millida_forget_session() {
-                    eprintln!("[auth] не удалось очистить мёртвую сессию Millida: {e}");
+                    eprintln!("[auth] не удалось очистить мёртвую сессию MCPC: {e}");
                 }
                 set_refresh_cooldown(false);
                 Refreshed::Dead
@@ -642,7 +642,7 @@ pub(crate) async fn refresh_millida_if_expiring(window: std::time::Duration) {
     let _ = refresh_session(Some(token)).await;
 }
 
-/// The only way the launcher talks to the Millida API as the signed-in user:
+/// The only way the launcher talks to the MCPC API as the signed-in user:
 /// the token is read from the vault here and never leaves the core.
 pub async fn millida_api_auth(path: String, method: String, body: Option<Value>) -> Result<Value, String> {
     millida_api_auth_in(path, method, body, None, None, None).await
