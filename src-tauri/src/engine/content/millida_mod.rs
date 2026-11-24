@@ -20,7 +20,8 @@ fn mod_base_allowed(base: &str) -> bool {
     let b = base.trim_end_matches('/');
     b == MOD_BASE || (b.starts_with(&format!("{}/", MOD_BASE)) && !b.contains(".."))
 }
-const FILE_PREFIX: &str = "millida-mod-";
+const FILE_PREFIX: &str = "millida-mod-"; // Keep recognizing an already-installed upstream jar; no upstream feed is trusted.
+const MCPC_TEXTURE_HOSTS_FOR_MOD: &str = match option_env!("MCPC_TEXTURE_HOSTS") { Some(v) => v, None => "" };
 
 pub(crate) fn is_millida_mod_file(name: &str) -> bool {
     name.starts_with(FILE_PREFIX) && name.ends_with(".jar")
@@ -104,9 +105,9 @@ struct Channel {
     copy: &'static str,
 }
 
-const STABLE: Channel = Channel { url: MANIFEST_URL, copy: "millida-mod-variants.json" };
+const STABLE: Channel = Channel { url: MANIFEST_URL, copy: "mcpc-mod-variants.json" };
 // Same folder and signing key as the stable list: the testing setting picks a file, never a host.
-const BETA: Channel = Channel { url: BETA_MANIFEST_URL, copy: "millida-mod-variants-beta.json" };
+const BETA: Channel = Channel { url: BETA_MANIFEST_URL, copy: "mcpc-mod-variants-beta.json" };
 
 /// Read before every launch of a modded build. Without a copy on disk, a launch
 /// with no network lost the mod the build already had.
@@ -150,19 +151,10 @@ async fn channel_manifest(channel: &Channel, source: ManifestSource) -> Result<V
         ManifestSource::Launch => get_json_swr(channel.url, &copy, MANIFEST_LAUNCH_TTL).await,
     }
     .map_err(|e| format!("Каталог версий мода недоступен: {}", e))?;
-    let seen = data_dir().join("millida-mod-signed");
     match manifest_signature(&m, MOD_MANIFEST_PUBKEY) {
-        ManifestSignature::Valid => {
-            if !seen.exists() {
-                let _ = std::fs::write(&seen, b"1");
-            }
-            Ok(m)
-        }
-        // Переход: пока выпуски мода не подписывались, список без подписи
-        // принимается — но только на ПК, который подписанного ещё не видел.
-        ManifestSignature::Missing if !seen.exists() => Ok(m),
-        ManifestSignature::Missing => Err("Список версий мода пришёл без подписи — мод не ставим".into()),
-        ManifestSignature::Invalid => Err("Подпись списка версий мода не сошлась — мод не ставим".into()),
+        ManifestSignature::Valid => Ok(m),
+        ManifestSignature::Missing => Err("Список версий MCPC-мода пришёл без подписи — мод не ставим".into()),
+        ManifestSignature::Invalid => Err("Подпись списка версий MCPC-мода не сошлась — мод не ставим".into()),
     }
 }
 
@@ -537,7 +529,13 @@ fn write_settings(dir: &Path, licensed: bool) -> Result<(), String> {
     if let Some(list) = hosts.as_array_mut() {
         // The same hosts the launcher shows textures from: head and skin renders and the CustomSkinAPI
         // redirect live on api.mcpc.example, wardrobe uploads on cdn.mcpc.example (skins/library.rs TEXTURE_HOSTS).
-        for host in ["api.mcpc.example", "cdn.mcpc.example", "textures.minecraft.net"] {
+        for host in ["api.mcpc.example", "cdn.mcpc.example", "textures.minecraft.net"]
+            .into_iter()
+            .chain(MCPC_TEXTURE_HOSTS_FOR_MOD.split(',').map(str::trim))
+        {
+            if host.is_empty() || !host.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'.' || c == b'-') {
+                continue;
+            }
             if !list.iter().any(|h| h.as_str() == Some(host)) {
                 list.push(Value::String(host.into()));
             }
