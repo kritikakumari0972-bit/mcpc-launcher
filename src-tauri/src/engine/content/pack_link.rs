@@ -1,4 +1,4 @@
-// The signed address of a catalogue pack archive on garage.millida.net (X-Amz-* in the query).
+// The signed address of an MCPC catalogue pack archive (X-Amz-* in the query).
 // The storage checks the signature when a request starts, not while the bytes flow. A long
 // install (hundreds of ranges one after another, a pause, a retry) outlives the address, and
 // every request after that was refused with «403 Forbidden» and the AWS address in the error
@@ -111,13 +111,13 @@ fn near_end(url: &str, age: Duration) -> bool {
 mod tests {
     use super::*;
 
-    const SIGNED: &str = "https://garage.millida.net/packs/a.zip?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20261111T100000Z&X-Amz-Expires=900&X-Amz-Signature=abc";
+    const SIGNED: &str = "https://packs.mcpc.example/packs/a.zip?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20261111T100000Z&X-Amz-Expires=900&X-Amz-Signature=abc";
 
     #[test]
     fn the_lifetime_comes_from_the_signature() {
         assert_eq!(lifetime(SIGNED), Some(Duration::from_secs(900)));
-        assert_eq!(lifetime("https://garage.millida.net/packs/a.zip?x-amz-expires=60"), Some(Duration::from_secs(60)));
-        assert_eq!(lifetime("https://garage.millida.net/packs/a.zip"), None);
+        assert_eq!(lifetime("https://packs.mcpc.example/packs/a.zip?x-amz-expires=60"), Some(Duration::from_secs(60)));
+        assert_eq!(lifetime("https://packs.mcpc.example/packs/a.zip"), None);
     }
 
     #[test]
@@ -127,16 +127,16 @@ mod tests {
         assert!(near_end(SIGNED, Duration::from_secs(780)), "two minutes before the end");
         assert!(near_end(SIGNED, Duration::from_secs(2000)));
         // A short address keeps a quarter of its life as the margin, not two minutes.
-        let short = "https://garage.millida.net/a.zip?X-Amz-Expires=60";
+        let short = "https://packs.mcpc.example/a.zip?X-Amz-Expires=60";
         assert!(!near_end(short, Duration::from_secs(40)));
         assert!(near_end(short, Duration::from_secs(45)));
-        assert!(!near_end("https://garage.millida.net/a.zip", Duration::from_secs(100_000)), "no lifetime, nothing to renew");
+        assert!(!near_end("https://packs.mcpc.example/a.zip", Duration::from_secs(100_000)), "no lifetime, nothing to renew");
     }
 
     #[test]
     fn only_a_refused_address_reads_as_refused() {
-        assert!(storage_refused("garage.millida.net/packs/a.zip → 403 Forbidden"));
-        assert!(!storage_refused("garage.millida.net/packs/a.zip → 404 Not Found"));
+        assert!(storage_refused("packs.mcpc.example/packs/a.zip → 403 Forbidden"));
+        assert!(!storage_refused("packs.mcpc.example/packs/a.zip → 404 Not Found"));
         assert!(!storage_refused("обрыв загрузки (timeout)"));
     }
 
