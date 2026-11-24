@@ -2,7 +2,7 @@
 name = "mcpc-launcher"
 version = "2.10.0"
 description = "MCPC Launcher — independent Minecraft Java launcher"
-authors = ["Millida"]
+authors = ["MCPC Contributors"]
 edition = "2021"
 license = "GPL-3.0-only"
 
@@ -11,7 +11,7 @@ members = [".", "voice"]
 default-members = [".", "voice"]
 
 [lib]
-name = "millida_launcher_lib"
+name = "mcpc_launcher_lib"
 crate-type = ["rlib"]
 
 [build-dependencies]
@@ -73,7 +73,7 @@ lewton = "0.10"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
 tauri-plugin-global-shortcut = "2.3.2"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
-millida-voice = { path = "voice" }
+mcpc-voice = { path = "voice" }
 
 [target.'cfg(windows)'.dependencies]
 # DPAPI for device.key: the file is useless outside the Windows account.
