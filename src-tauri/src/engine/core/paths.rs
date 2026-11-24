@@ -13,7 +13,7 @@ fn copy_legacy_entries(src: &std::path::Path, dst: &std::path::Path, root: bool)
     for entry in std::fs::read_dir(src)? {
         let entry = entry?;
         let name = entry.file_name();
-        if root && name == "minecraft" {
+        if root && name.to_string_lossy() == "minecraft" {
             continue; // Keep potentially multi-gigabyte game installations in place.
         }
         let source = entry.path();
@@ -43,7 +43,10 @@ fn migrate_legacy_data(base: &std::path::Path, legacy: &std::path::Path, target:
         copy_legacy_entries(legacy, &staging, true)?;
         let old_default_game = legacy.join("minecraft");
         let old_root_marker = legacy.join("game-root.txt");
-        if !old_root_marker.exists() && old_default_game.is_dir() {
+        let has_custom_root = std::fs::read_to_string(&old_root_marker)
+            .map(|value| !value.trim().is_empty())
+            .unwrap_or(false);
+        if !has_custom_root && old_default_game.is_dir() {
             std::fs::write(staging.join("game-root.txt"), old_default_game.to_string_lossy().as_bytes())?;
         }
         if target.exists() {
