@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Millida Launcher",
+  "productName": "MCPC Launcher",
   "version": "2.10.0",
-  "identifier": "net.millida.launcher",
+  "identifier": "io.github.kritikakumari0972.mcpc_launcher",
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:5173",
@@ -14,7 +14,7 @@
     "withGlobalTauri": false,
     "windows": [
       {
-        "title": "Millida Launcher",
+        "title": "MCPC Launcher",
         "width": 1200,
         "height": 760,
         "minWidth": 980,
@@ -67,11 +67,10 @@
           "http://ipc.localhost",
           "asset:",
           "http://asset.localhost",
-          "https://api.millida.net",
-          "wss://api.millida.net",
           "https://api.modrinth.com",
           "https://cdn.modrinth.com",
-          "https://millida.net"
+          "https://api.mcpc.example",
+          "wss://api.mcpc.example"
         ],
         "worker-src": [
           "'self'",
@@ -148,11 +147,10 @@
           "ws://localhost:5173",
           "http://127.0.0.1:5173",
           "http://localhost:5173",
-          "https://api.millida.net",
-          "wss://api.millida.net",
           "https://api.modrinth.com",
           "https://cdn.modrinth.com",
-          "https://millida.net"
+          "https://api.mcpc.example",
+          "wss://api.mcpc.example"
         ],
         "worker-src": [
           "'self'",
@@ -185,12 +183,12 @@
       "rpm",
       "appimage"
     ],
-    "publisher": "Millida",
-    "homepage": "https://millida.net/launcher",
-    "copyright": "© 2026 Millida (Roman Babaskin)",
+    "publisher": "MCPC",
+    "homepage": "https://github.com/kritikakumari0972-bit/mcpc-launcher",
+    "copyright": "© 2026 MCPC contributors",
     "category": "Game",
-    "shortDescription": "Лаунчер Minecraft",
-    "longDescription": "Лаунчер Minecraft от Millida: версии от Mojang, загрузчики Fabric, Quilt, Forge и NeoForge, моды и модпаки с Modrinth и CurseForge.",
+    "shortDescription": "MCPC Minecraft Java Launcher",
+    "longDescription": "MCPC Launcher: Minecraft Java versions, mod loaders, mods, modpacks, worlds and server tools.",
     "icon": [
       "icons/icon.icns",
       "icons/icon.ico",
@@ -228,7 +226,10 @@
         "installerIcon": "icons/icon.ico",
         "installMode": "currentUser",
         "installerHooks": "installer-hooks.nsh",
-        "languages": ["Russian", "English"]
+        "languages": [
+          "Russian",
+          "English"
+        ]
       }
     },
     "createUpdaterArtifacts": false
@@ -237,18 +238,8 @@
     "deep-link": {
       "desktop": {
         "schemes": [
-          "millida"
+          "mcpc"
         ]
-      }
-    },
-    "updater": {
-      "endpoints": [
-        "https://launcher-storage.millida.net/v2/gh/latest.json?v={{current_version}}",
-        "https://launcher-storage.millida.net/v2/latest.json?v={{current_version}}"
-      ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI5MzUwRDVGRUE4NUI5NzcKUldSM3VZWHFYdzAxS1VyamhaeUdwQkRTNzZwN3U2WXRjaDFpWDZ6b3FvLzN0bkFvY3JwWEFQeCsK",
-      "windows": {
-        "installMode": "passive"
       }
     }
   }
