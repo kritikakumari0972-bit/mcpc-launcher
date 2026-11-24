@@ -17,7 +17,7 @@ const DEV_LOCAL =
 // Подмена адреса API через localStorage — только в dev: в релизе запись в
 // localStorage (XSS, чужое расширение) иначе увела бы все запросы с токеном.
 const API_OVERRIDE = import.meta.env.DEV ? localStorage.getItem('m-api') : null
-const MCPC_API_BASE = (import.meta.env.VITE_MCPC_API_BASE_URL || 'https://api.mcpc.example/v2').replace(new RegExp('/+
+const MCPC_API_BASE = (import.meta.env.VITE_MCPC_API_BASE_URL || 'https://api.mcpc.example/v2').replace(/\/+$/, '')
 export const LAUNCHER_API = API_OVERRIDE || (DEV_LOCAL ? '/papi/v2' : MCPC_API_BASE)
 
 /// Modrinth и CurseForge недоступны в России без VPN, поэтому и каталог, и
