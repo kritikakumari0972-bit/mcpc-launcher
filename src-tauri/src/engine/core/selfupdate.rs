@@ -1,4 +1,4 @@
-// Fallback launcher update: takes the version list from launcher-storage.millida.net (addresses from tauri.conf.json), downloads the new build from GitHub or from our mirror and checks the Millida signature (minisign).
+// Fallback launcher update: reads only the MCPC-configured signed release feed and verifies it with MCPC's own minisign key.
 // If the signature does not match, the file is deleted and not run. Running the installer, replacing the .app on macOS and the AppImage on Linux are described at each function.
 use minisign_verify::{PublicKey, Signature};
 use serde::Serialize;
@@ -19,7 +19,7 @@ use super::paths::open_path;
 // tauri.conf.json, so the fallback is not a hole through which a compromised CDN
 // could run an arbitrary installer.
 // Fallback address of the version list. It returns json with the version, the file link and the signature. The main path goes through the Tauri updater plugin.
-const FALLBACK_ENDPOINTS: &[&str] = &["https://launcher-storage.millida.net/latest.json"];
+const FALLBACK_ENDPOINTS: &[&str] = &[];
 
 // Testing channel. The player opts in from settings and then sees a release
 // before everyone else, so a heavy change lands on a few hundred machines
@@ -216,6 +216,10 @@ pub async fn fallback_latest(app: &AppHandle) -> Result<Option<FallbackUpdate>, 
 }
 
 async fn fetch_manifest(app: &AppHandle, require_newer: bool) -> Result<Option<FallbackUpdate>, String> {
+    let sources = endpoints(app);
+    if sources.is_empty() {
+        return Ok(None);
+    }
     let keys = platform_keys()?;
     let current = app.package_info().version.to_string();
     let mut last = "нет ни одного источника обновления".to_string();
@@ -223,7 +227,7 @@ async fn fetch_manifest(app: &AppHandle, require_newer: bool) -> Result<Option<F
     // compared: the scan still stops at the first stable manifest that works, so
     // a manifest signed by another key never competes with this one.
     let mut best: Option<FallbackUpdate> = None;
-    for url in endpoints(app) {
+    for url in sources {
         let beta = url.split('?').next().unwrap_or(&url).ends_with("/beta.json");
         let doc = match get_json(&url).await {
             Ok(v) => v,
@@ -487,7 +491,7 @@ fn refuse_inside_flatpak() -> Result<(), String> {
 }
 
 const FLATPAK_UPDATE_HINT: &str =
-    "лаунчер из Flatpak обновляется через магазин приложений или командой flatpak update net.millida.launcher";
+    "лаунчер из Flatpak обновляется через магазин приложений или командой flatpak update io.github.kritikakumari0972.mcpc_launcher";
 
 /// One preparation of an update at a time. The core's tray loop and the window can both ask for the same file: two
 /// downloads into one path made the loser delete the winner's good file (on Windows its rename fails while the
@@ -988,18 +992,18 @@ mod tests {
     fn testing_channel_only_swaps_the_manifest_name() {
         let cases: [(&str, Option<&str>); 6] = [
             (
-                "https://launcher-storage.millida.net/v2/latest.json",
-                Some("https://launcher-storage.millida.net/v2/beta.json"),
+                "https://updates.mcpc.example/v2/latest.json",
+                Some("https://updates.mcpc.example/v2/beta.json"),
             ),
             (
-                "https://launcher-storage.millida.net/v2/gh/latest.json?v=2.0.203",
-                Some("https://launcher-storage.millida.net/v2/gh/beta.json?v=2.0.203"),
+                "https://updates.mcpc.example/v2/gh/latest.json?v=2.0.203",
+                Some("https://updates.mcpc.example/v2/gh/beta.json?v=2.0.203"),
             ),
             (
-                "https://launcher-storage.millida.net/latest.json",
-                Some("https://launcher-storage.millida.net/beta.json"),
+                "https://updates.mcpc.example/latest.json",
+                Some("https://updates.mcpc.example/beta.json"),
             ),
-            ("https://launcher-storage.millida.net/v2/install.json", None),
+            ("https://updates.mcpc.example/v2/install.json", None),
             ("https://evil.example/latest.json.txt", None),
             ("latest.json", None),
         ];
@@ -1019,14 +1023,14 @@ mod tests {
     /// на части людей» превратилось бы в «стучимся всеми».
     #[test]
     fn testing_channel_asks_beta_before_its_own_stable_neighbour() {
-        let configured = vec!["https://launcher-storage.millida.net/v2/latest.json".to_string()];
+        let configured = vec!["https://updates.mcpc.example/v2/latest.json".to_string()];
 
         let off = channel_order(&configured, false);
         assert_eq!(
             off,
             vec![
-                "https://launcher-storage.millida.net/v2/latest.json".to_string(),
-                "https://launcher-storage.millida.net/latest.json".to_string(),
+                "https://updates.mcpc.example/v2/latest.json".to_string(),
+                "https://updates.mcpc.example/latest.json".to_string(),
             ],
             "без галки бета не спрашивается вовсе"
         );
@@ -1035,10 +1039,10 @@ mod tests {
         assert_eq!(
             on,
             vec![
-                "https://launcher-storage.millida.net/v2/beta.json".to_string(),
-                "https://launcher-storage.millida.net/v2/latest.json".to_string(),
-                "https://launcher-storage.millida.net/beta.json".to_string(),
-                "https://launcher-storage.millida.net/latest.json".to_string(),
+                "https://updates.mcpc.example/v2/beta.json".to_string(),
+                "https://updates.mcpc.example/v2/latest.json".to_string(),
+                "https://updates.mcpc.example/beta.json".to_string(),
+                "https://updates.mcpc.example/latest.json".to_string(),
             ],
             "с галкой каждая бета идёт перед своим стабильным соседом"
         );
