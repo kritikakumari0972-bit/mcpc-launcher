@@ -200,7 +200,7 @@ enum ManifestSignature {
 /// варианта по порядку. Не зависит от пробелов и порядка ключей json.
 fn manifest_canonical(m: &Value) -> Option<String> {
     let version = m["version"].as_str()?;
-    let mut out = format!("mcpc-mod-manifest-v1\nversion={}\n", version);
+    let mut out = format!("millida-mod-manifest-v1\nversion={}\n", version);
     for v in m["variants"].as_array()? {
         let artifact = v["artifact"].as_str()?.replace("{version}", version);
         let sha = v["sha256"].as_str()?.to_lowercase();
