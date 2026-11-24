@@ -1,6 +1,6 @@
 [package]
 name = "mcpc-launcher"
-version = "2.0.0"
+version = "2.10.0"
 description = "MCPC Launcher — independent Minecraft Java launcher"
 authors = ["Millida"]
 edition = "2021"
