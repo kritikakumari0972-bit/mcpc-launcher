@@ -1,11 +1,11 @@
-// Install plan from the catalog: which files a modpack needs (required and optional), their links and hashes from api.millida.net.
+// Install plan from the catalog: which files a modpack needs (required and optional), their links and hashes from the configured MCPC API.
 // Files are downloaded into a temporary folder in the launcher data and moved into the modpack after the check.
 use crate::engine::*;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use tauri::AppHandle;
 
-/// Установка материала каталога Millida вместе с зависимостями — по плану,
+/// Установка материала каталога MCPC вместе с зависимостями — по плану,
 /// который собирает наш API: `GET /v2/catalog/items/:slug/resolve?gameVersion=&loader=`.
 ///
 /// Подход тот же, что у Modrinth App (theseus `install_project_with_dependencies`):
@@ -42,7 +42,7 @@ pub struct CatalogPlanDone {
     pub installed: Vec<String>,
     /// Уже стояли в сборке — не качали.
     pub skipped: Vec<String>,
-    /// Нужны, но в каталоге Millida их нет — человеку говорим, что поставить руками.
+    /// Нужны, но в каталоге MCPC их нет — человеку говорим, что поставить руками.
     pub missing: Vec<String>,
 }
 
@@ -440,7 +440,7 @@ mod tests {
     use serde_json::json;
 
     fn file(slug: &str, role: &str, name: &str) -> Value {
-        json!({ "slug": slug, "title": slug, "role": role, "fileName": name, "url": "https://cdn.millida.trade/forum/dl/".to_string() + name, "sha1": "a".repeat(40), "size": 10 })
+        json!({ "slug": slug, "title": slug, "role": role, "fileName": name, "url": "https://cdn.mcpc.example/forum/dl/".to_string() + name, "sha1": "a".repeat(40), "size": 10 })
     }
 
     /// План → вердикт: сам материал, обязательная и необязательная зависимости,
@@ -465,9 +465,9 @@ mod tests {
     fn api_file(slug: &str, role: &str, name: &str) -> Value {
         json!({
             "role": role,
-            "project": { "slug": slug, "section": "mods", "title": slug.to_string() + " Mod", "icon": "https://millida.net/i.png" },
+            "project": { "slug": slug, "section": "mods", "title": slug.to_string() + " Mod", "icon": "https://mcpc.example/i.png" },
             "file": { "id": "f-".to_string() + slug, "version": "1.20.1", "fileName": name, "size": 42, "sha1": "a".repeat(40), "sha512": "b".repeat(128) },
-            "download": { "url": "https://api.millida.net/v2/catalog/files/f-".to_string() + slug + "/download", "host": "millida" },
+            "download": { "url": "https://api.millida.net/v2/catalog/files/f-".to_string() + slug + "/download", "host": "mcpc" },
             "installPath": "mods",
         })
     }
@@ -534,7 +534,7 @@ mod tests {
         let mut author_page = base();
         author_page.push(json!({ "slug": "x", "role": "required", "fileName": "x.jar", "url": "https://modrinth.com/mod/x", "sha1": "a".repeat(40) }));
         let mut no_hash = base();
-        no_hash.push(json!({ "slug": "x", "role": "required", "fileName": "x.jar", "url": "https://cdn.millida.trade/x.jar" }));
+        no_hash.push(json!({ "slug": "x", "role": "required", "fileName": "x.jar", "url": "https://cdn.mcpc.example/x.jar" }));
         let mut local = base();
         local.push(json!({ "slug": "x", "role": "required", "fileName": "x.jar", "url": "https://127.0.0.1/x.jar", "sha1": "a".repeat(40) }));
         let mut not_jar = base();
