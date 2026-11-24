@@ -1,5 +1,5 @@
-// Install from the Millida catalog (millida.net/mods, textures, modpacks) when the user asks.
-// The file address comes from api.millida.net. It is checked for https and a Millida host, then the hash is checked.
+// Install from the MCPC catalog (mcpc.example/mods, textures, modpacks) when the user asks.
+// The file address comes from api.mcpc.example. It is checked for https and a Millida host, then the hash is checked.
 use crate::engine::*;
 use serde_json::Value;
 use tauri::AppHandle;
@@ -280,7 +280,7 @@ mod tests {
     fn page_of_the_author_is_not_a_file() {
         assert!(check_file_url("https://modrinth.com/mod/iris").is_err());
         assert!(check_file_url("https://www.curseforge.com/minecraft/mc-mods/jei").is_err());
-        assert!(check_file_url("http://cdn.millida.trade/a.jar").is_err());
+        assert!(check_file_url("http://cdn.mcpc.example/a.jar").is_err());
         assert!(check_file_url("https://127.0.0.1/a.jar").is_err());
         assert!(check_file_url("https://cdn.millida.trade/forum/dl/a.jar").is_ok());
     }
