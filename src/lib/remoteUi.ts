@@ -14,8 +14,8 @@ import type { RemoteUiBridge } from './remoteUiRules'
 export { REMOTE_UI_BASE, REMOTE_UI_PUBLIC_KEY, sha256Hex } from './remoteOrigin'
 
 export const REMOTE_UI_API = 1
-const MANIFEST_TAG = 'millida-launcher-ui/1'
-// Website screens are on for everyone. 'm-remote-ui-off' = '1' is a local escape hatch; the site turns them off
+const MANIFEST_TAG = 'mcpc-launcher-ui/1'
+// MCPC remote website screens stay disabled unless an MCPC-owned signed bundle is configured. 'm-remote-ui-off' = '1' is a local escape hatch; the site turns them off
 // for all launchers with "off": true in the manifest (see downloadBundle), retried after OFF_RETRY_MS.
 const OFF_KEY = 'm-remote-ui-off'
 const SITE_OFF_KEY = 'm-remote-ui-site-off'
@@ -54,6 +54,7 @@ export interface RemoteUiModule {
 }
 
 export function remoteUiEnabled(now = Date.now()): boolean {
+  if (import.meta.env.VITE_MCPC_REMOTE_UI_ENABLED !== 'true') return false
   try {
     if (localStorage.getItem(OFF_KEY) === '1') return false
     const off = Number(localStorage.getItem(SITE_OFF_KEY) || 0)
@@ -116,7 +117,7 @@ function coreChunks(m: RemoteUiManifest): RemoteUiChunk[] {
   return (m.chunks ?? []).filter((c) => c.core)
 }
 
-const DB_NAME = 'millida-remote-ui'
+const DB_NAME = 'mcpc-remote-ui'
 const STORE = 'kv'
 let opening: Promise<IDBDatabase | null> | null = null
 
