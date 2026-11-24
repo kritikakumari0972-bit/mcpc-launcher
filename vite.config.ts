@@ -74,9 +74,18 @@ export default defineConfig(({ mode }) => {
   const apiBase = mcpcEnv.VITE_MCPC_API_BASE_URL || 'https://api.mcpc.example/v2'
   let apiOrigin: string
   try {
-    apiOrigin = new URL(apiBase).origin
+    const parsedApiBase = new URL(apiBase)
+    const validApiBase =
+      parsedApiBase.protocol === 'https:' &&
+      !parsedApiBase.username &&
+      !parsedApiBase.password &&
+      !parsedApiBase.search &&
+      !parsedApiBase.hash &&
+      parsedApiBase.pathname.replace(/\\/+$/, '') === '/v2'
+    if (!validApiBase) throw new Error('invalid API root')
+    apiOrigin = parsedApiBase.origin
   } catch {
-    throw new Error('VITE_MCPC_API_BASE_URL must be an absolute HTTPS URL ending in /v2')
+    throw new Error('VITE_MCPC_API_BASE_URL must be an HTTPS origin ending in /v2')
   }
   return {
   plugins: [react(), oldWebKitCss(), devCosmeticModels(), devMedia(), bundledMedia()],
