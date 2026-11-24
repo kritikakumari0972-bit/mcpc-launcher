@@ -130,7 +130,7 @@ codegen-units = 1
 
 # The app crate is the critical path of a release build: with a single codegen
 # unit it compiles serially long after every dependency has finished.
-[profile.release.package.millida-launcher]
+[profile.release.package.mcpc-launcher]
 codegen-units = 16
 # CI keeps the incremental state of this crate between releases, so a release
 # recompiles what changed instead of the whole crate.
