@@ -1,5 +1,5 @@
-// UI requests to the Millida API (api.millida.net/v2) and the site addresses. In the app a request goes through the core, which adds
-// the token itself. The direct fetch below has no token, it is a fallback for the browser in development. The Modrinth catalog goes through our API (/launcher/mr).
+// Requests to the optional MCPC API. Configure VITE_MCPC_API_BASE_URL for your own backend.
+// The reserved .example default prevents an unconfigured fork from contacting the original publisher.
 import { hasTauri } from '../ipc/tauri'
 import { millidaApi, openUrl, type ApiMarket } from '../ipc/commands'
 import { getLocale, getMarket } from '../i18n'
@@ -11,13 +11,14 @@ import { DEMO_USER, ECONOMY_SHOWCASE, demoAnswer } from './demo'
 
 // Dev-приложение открыто с http://localhost:5173, а прод по CORS пускает только
 // tauri://localhost — прямые запросы (каталог Modrinth, скины в WebGL) падали.
-// В dev с localhost ходим через прокси Vite (/papi → api.millida.net).
+// In local development, backend requests pass through Vite's /papi proxy.
 const DEV_LOCAL =
   import.meta.env.DEV && typeof location !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)
 // Подмена адреса API через localStorage — только в dev: в релизе запись в
 // localStorage (XSS, чужое расширение) иначе увела бы все запросы с токеном.
 const API_OVERRIDE = import.meta.env.DEV ? localStorage.getItem('m-api') : null
-export const LAUNCHER_API = API_OVERRIDE || (DEV_LOCAL ? '/papi/v2' : 'https://api.millida.net/v2')
+const MCPC_API_BASE = (import.meta.env.VITE_MCPC_API_BASE_URL || 'https://api.mcpc.example/v2').replace(/\\/+$/, '')
+export const LAUNCHER_API = API_OVERRIDE || (DEV_LOCAL ? '/papi/v2' : MCPC_API_BASE)
 
 /// Modrinth и CurseForge недоступны в России без VPN, поэтому и каталог, и
 /// картинки идут через наш API: он же отдаёт их с собственного адреса.
@@ -60,11 +61,11 @@ export function mirrorAsset(url: string | undefined | null): string | undefined 
   return LAUNCHER_API + '/launcher/dl?url=' + encodeURIComponent(url)
 }
 
-export const PROFILE_URL = 'https://millida.net/profile'
+export const PROFILE_URL = 'https://github.com/kritikakumari0972-bit/mcpc-launcher'
 
-export const PLUS_MANAGE_URL = 'https://millida.net/profile#plus'
+export const PLUS_MANAGE_URL = PROFILE_URL
 
-export const SUPPORT_URL = 'https://millida.net/chats?tab=support'
+export const SUPPORT_URL = 'https://github.com/kritikakumari0972-bit/mcpc-launcher/issues'
 
 // No Authorization here: authenticated calls go through the core, which holds
 // the token. The plain fetch path is the unauthenticated browser fallback.
@@ -92,7 +93,7 @@ export function hasMillidaAccount(): boolean {
 }
 
 /// Signalled by event rather than calling session.ts directly, which would be a circular import.
-export const SESSION_EXPIRED_EVENT = 'millida-session-expired'
+export const SESSION_EXPIRED_EVENT = 'mcpc-session-expired'
 
 /**
  * Вход действительно кончился: ядро отвечает ровно `unauthorized` только на 401 продления или
