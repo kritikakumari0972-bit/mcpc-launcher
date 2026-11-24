@@ -1,5 +1,5 @@
-// Cloud profile: when the user clicks "Upload", api.millida.net/v2/launcher/sync gets the modpack descriptions (catalog manifests, not files), the UI settings and the computer name. "Download" brings it all back.
-// Needs a Millida account login. On restore the mods themselves are downloaded from Modrinth/CurseForge and checked by hash.
+// Cloud profile: when the user clicks "Upload", the configured MCPC API /launcher/sync gets the modpack descriptions (catalog manifests, not files), the UI settings and the computer name. "Download" brings it all back.
+// Needs an MCPC account login. On restore the mods themselves are downloaded from Modrinth/CurseForge and checked by hash.
 //! Cloud profile: the launcher on another machine, with the same builds and the
 //! same settings.
 //!
