@@ -1030,7 +1030,6 @@ mod tests {
             off,
             vec![
                 "https://updates.mcpc.example/v2/latest.json".to_string(),
-                "https://updates.mcpc.example/latest.json".to_string(),
             ],
             "без галки бета не спрашивается вовсе"
         );
@@ -1041,8 +1040,6 @@ mod tests {
             vec![
                 "https://updates.mcpc.example/v2/beta.json".to_string(),
                 "https://updates.mcpc.example/v2/latest.json".to_string(),
-                "https://updates.mcpc.example/beta.json".to_string(),
-                "https://updates.mcpc.example/latest.json".to_string(),
             ],
             "с галкой каждая бета идёт перед своим стабильным соседом"
         );
