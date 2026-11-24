@@ -92,7 +92,7 @@ fn processing_of(prefs: &AudioPrefs) -> Result<Processing, String> {
 }
 
 /// The party the next game launch should join by voice: the mod reads it from
-/// MILLIDA_PARTY and asks the service for the same room's ticket.
+/// MCPC_PARTY and asks the service for the same room's ticket.
 pub fn bound_party() -> Option<String> {
     BOUND_PARTY.lock().unwrap_or_else(|e| e.into_inner()).clone()
 }
