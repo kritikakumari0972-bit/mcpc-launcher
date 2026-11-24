@@ -330,6 +330,9 @@ fn parse_ticket(v: &Value, configured_domains: &str) -> Result<(Ticket, String, 
 }
 
 async fn fetch_ticket(party: &str) -> Result<Ticket, String> {
+    if MCPC_VOICE_RELAY_DOMAINS.trim().is_empty() {
+        return Err("MCPC voice relay is not configured".into());
+    }
     let body = serde_json::json!({ "party": party });
     // Ticket request to the configured MCPC API /voice/ticket with the account token. The answer has the relay address and the session secret, they stay in the core.
     let v = millida_api_auth("/voice/ticket".into(), "POST".into(), Some(body)).await?;
