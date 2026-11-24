@@ -10,6 +10,7 @@ This fork is deliberately separated from the original launcher's infrastructure.
 | VITE_MCPC_API_BASE_URL | Frontend backend root | https://api.mcpc.example/v2 |
 | MCPC_MS_CLIENT_ID | MCPC Microsoft Entra application ID | Not configured |
 | MCPC_DISCORD_APP_ID | MCPC Discord Rich Presence application ID | Not configured |
+| MCPC_VOICE_RELAY_DOMAINS | Comma-separated MCPC-owned voice relay domains | Empty (voice disabled) |
 | VITE_MCPC_UPDATES_ENABLED | Enable own signed update feed | false |
 
 The .example hostname is reserved and is not a working API. It prevents an unconfigured fork from contacting the original publisher.
@@ -23,6 +24,10 @@ Do not point the MCPC client at another publisher's API. The API host must use H
 ## Microsoft login
 
 Create an MCPC-owned Microsoft Entra application and set MCPC_MS_CLIENT_ID at compile time. The launcher uses Microsoft device-code sign-in and sends the user to Microsoft's own sign-in page; it does not collect the password.
+
+## Party voice
+
+Party voice is disabled until MCPC_VOICE_RELAY_DOMAINS is set at compile time to domains owned and operated by MCPC. The client accepts only those exact domains and their subdomains, and continues to reject local/private IP addresses. Do not add upstream publisher relay domains.
 
 ## Updates
 
