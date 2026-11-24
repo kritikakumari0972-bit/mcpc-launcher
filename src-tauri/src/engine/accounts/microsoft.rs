@@ -1,5 +1,5 @@
 // Microsoft login by code (device code): the user types the password on the Microsoft page, not in the launcher.
-// Then the chain Xbox Live, XSTS, Minecraft Services. All these hosts belong to Microsoft/Mojang. No Millida servers here.
+// Then the chain Xbox Live, XSTS, Minecraft Services. All these hosts belong to Microsoft/Mojang; this flow does not use the MCPC backend.
 use crate::engine::*;
 use serde_json::Value;
 
