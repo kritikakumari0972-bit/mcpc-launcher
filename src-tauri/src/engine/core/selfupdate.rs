@@ -168,7 +168,7 @@ fn endpoints(app: &AppHandle) -> Vec<String> {
     channel_order(&configured, beta_channel())
 }
 
-// The public signing key comes from tauri.conf.json. The private part belongs to Millida and is not in this repository.
+// The public signing key comes from tauri.conf.json. The private part belongs to MCPC and is not in this repository.
 fn pubkey(app: &AppHandle) -> Result<String, String> {
     app.config()
         .plugins
@@ -371,7 +371,7 @@ fn drop_stale_in(dir: &Path, keep: &Path) {
 
 pub(crate) fn sig_path(file: &Path) -> PathBuf {
     let mut name = file.file_name().map(|n| n.to_os_string()).unwrap_or_default();
-    name.push(".millidasig");
+    name.push(".mcpcsig");
     file.with_file_name(name)
 }
 
@@ -379,12 +379,12 @@ pub(crate) fn sig_path(file: &Path) -> PathBuf {
 /// window (which used to hold the downloaded bytes in memory) is gone or rebuilt.
 pub(crate) fn ver_path(file: &Path) -> PathBuf {
     let mut name = file.file_name().map(|n| n.to_os_string()).unwrap_or_default();
-    name.push(".millidaver");
+    name.push(".mcpcver");
     file.with_file_name(name)
 }
 
 fn is_sidecar(file: &Path) -> bool {
-    file.extension().is_some_and(|e| e == "millidasig" || e == "millidaver")
+    file.extension().is_some_and(|e| e == "mcpcsig" || e == "mcpcver")
 }
 
 /// Staged files newer than the running build, newest first. Pure: the disk walk and the
@@ -797,7 +797,7 @@ fn relaunch_after_exit(target: &Path, opener: &str) -> Result<(), String> {
     super::proc::outside_appimage(&mut std::process::Command::new("/bin/sh"))
         .arg("-c")
         .arg(script)
-        .arg("millida-relaunch")
+        .arg("mcpc-relaunch")
         .arg(std::process::id().to_string())
         .arg(target)
         .spawn()
@@ -823,8 +823,8 @@ fn install_app_bundle(archive: &Path, restart: Restart) -> Result<(), String> {
         return Err("лаунчер запущен из образа — перенеси его в «Программы»".into());
     }
 
-    let stage = parent.join(".millida-update");
-    // Cleans our own temporary .millida-update folder next to the app.
+    let stage = parent.join(".mcpc-update");
+    // Cleans our own temporary .mcpc-update folder next to the app.
     let _ = std::fs::remove_dir_all(&stage);
     std::fs::create_dir_all(&stage)
         .map_err(|e| format!("нет прав на запись в {}: {}", parent.display(), e))?;
@@ -840,11 +840,11 @@ fn install_app_bundle(archive: &Path, restart: Restart) -> Result<(), String> {
 
     // Permissions and the quarantine attribute are fixed before the swap: an
     // archived bundle can arrive without the write bit.
-    // chmod u+w and xattr -cr on the freshly unpacked copy: removes the macOS quarantine flag. The archive passed the Millida signature check before, but Gatekeeper is not run on it.
+    // chmod u+w and xattr -cr on the freshly unpacked copy: removes the macOS quarantine flag. The archive passed the MCPC signature check before, but Gatekeeper is not run on it.
     let _ = std::process::Command::new("/bin/chmod").arg("-R").arg("u+w").arg(&fresh).status();
     let _ = std::process::Command::new("/usr/bin/xattr").arg("-cr").arg(&fresh).status();
 
-    let retired = parent.join(format!(".millida-old-{}", std::process::id()));
+    let retired = parent.join(format!(".mcpc-old-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&retired);
     std::fs::rename(&bundle, &retired).map_err(|e| {
         let _ = std::fs::remove_dir_all(&stage);
@@ -897,8 +897,8 @@ pub fn sweep_retired_bundles() {
     let Ok(rd) = std::fs::read_dir(parent) else { return };
     for e in rd.flatten() {
         let name = e.file_name().to_string_lossy().to_string();
-        if name.starts_with(".millida-old-") || name == ".millida-update" {
-            // Deletes leftovers of earlier updates next to the app (.millida-old-*, .millida-update).
+        if name.starts_with(".mcpc-old-") || name == ".mcpc-update" {
+            // Deletes leftovers of earlier updates next to the app (.mcpc-old-*, .mcpc-update).
             let _ = std::fs::remove_dir_all(e.path());
         }
     }
@@ -958,11 +958,11 @@ mod tests {
 
     #[test]
     fn signature_and_version_files_are_not_updates_themselves() {
-        assert!(is_sidecar(Path::new("Millida_2.0.301_setup.exe.millidasig")));
-        assert!(is_sidecar(Path::new("Millida_2.0.301_setup.exe.millidaver")));
-        assert!(!is_sidecar(Path::new("Millida_2.0.301_setup.exe")));
-        let f = Path::new("updates/Millida_2.0.301_setup.exe");
-        assert_eq!(ver_path(f), Path::new("updates/Millida_2.0.301_setup.exe.millidaver"));
+        assert!(is_sidecar(Path::new("MCPC_2.0.301_setup.exe.mcpcsig")));
+        assert!(is_sidecar(Path::new("MCPC_2.0.301_setup.exe.mcpcver")));
+        assert!(!is_sidecar(Path::new("MCPC_2.0.301_setup.exe")));
+        let f = Path::new("updates/MCPC_2.0.301_setup.exe");
+        assert_eq!(ver_path(f), Path::new("updates/MCPC_2.0.301_setup.exe.mcpcver"));
         assert_ne!(ver_path(f), sig_path(f));
     }
 
@@ -1105,11 +1105,11 @@ mod tests {
     /// never saw it again, "Выход" from the tray did not install it and the 10-minute download deleted it.
     #[test]
     fn a_staged_patch_is_found_by_the_core_like_an_installer() {
-        let dir = std::env::temp_dir().join(format!("millida-staged-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("mcpc-staged-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let patch = dir.join(selfdelta::staged_name("2.0.9"));
-        let installer = dir.join("Millida-Launcher_2.0.8_x64-setup.exe");
+        let installer = dir.join("MCPC-Launcher_2.0.8_x64-setup.exe");
         std::fs::write(&patch, b"patched exe").unwrap();
         std::fs::write(&installer, b"installer").unwrap();
         record_staged(&patch, "patch-signature", "2.0.9").unwrap();
@@ -1188,11 +1188,11 @@ mod tests {
     #[test]
     fn system_packages_go_to_the_package_installer() {
         let cases: [(&str, bool, &str); 5] = [
-            ("Millida-Launcher_2.0.150_amd64.deb", true, "deb needs root, only the package manager may ask for it"),
-            ("Millida-Launcher-2.0.150-1.x86_64.RPM", true, "extension case must not decide the install path"),
-            ("Millida-Launcher_2.0.150_amd64.AppImage", false, "an AppImage is replaced in place"),
-            ("Millida-Launcher.deb.AppImage", false, "only the final extension names the format"),
-            ("Millida-Launcher", false, "no extension is not a package"),
+            ("MCPC-Launcher_2.0.150_amd64.deb", true, "deb needs root, only the package manager may ask for it"),
+            ("MCPC-Launcher-2.0.150-1.x86_64.RPM", true, "extension case must not decide the install path"),
+            ("MCPC-Launcher_2.0.150_amd64.AppImage", false, "an AppImage is replaced in place"),
+            ("MCPC-Launcher.deb.AppImage", false, "only the final extension names the format"),
+            ("MCPC-Launcher", false, "no extension is not a package"),
         ];
         for (name, want, why) in cases {
             assert_eq!(is_system_package(Path::new(name)), want, "{}: {}", name, why);
