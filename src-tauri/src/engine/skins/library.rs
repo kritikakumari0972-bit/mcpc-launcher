@@ -157,21 +157,20 @@ pub fn save_texture(kind: &str, name: &str, data: &str, slim: bool) -> Result<Ve
     store(kind, &metas)
 }
 
-/// Hosts the launcher itself links textures from: Mojang's texture CDN, our own
-/// API and CDN (head and skin rendering included), and the Modrinth CDN that
-/// serves modpack assets.
-const TEXTURE_HOSTS: &[&str] = &[
-    "textures.minecraft.net",
-    "api.millida.net",
-    "cdn.millida.net",
-    "millida.net",
-    "cdn.millida.trade",
-    "millida.trade",
-    "cdn.modrinth.com",
-];
+/// Public content hosts that do not depend on an MCPC account or deployment.
+const TEXTURE_HOSTS: &[&str] = &["textures.minecraft.net", "cdn.modrinth.com"];
 
-/// Our own domains; wardrobe textures live on `cdn.millida.trade`.
-const TEXTURE_HOST_SUFFIXES: &[&str] = &[".millida.net", ".millida.trade"];
+/// MCPC-controlled texture hosts are supplied at build time as comma-separated
+/// exact hosts and optional DNS suffixes. No upstream publisher hosts are trusted.
+const MCPC_TEXTURE_HOSTS: &str = match option_env!("MCPC_TEXTURE_HOSTS") { Some(v) => v, None => "" };
+const MCPC_TEXTURE_HOST_SUFFIXES: &str = match option_env!("MCPC_TEXTURE_HOST_SUFFIXES") { Some(v) => v, None => "" };
+
+fn host_in_configured_list(host: &str, list: &str, suffix: bool) -> bool {
+    list.split(',')
+        .map(|item| item.trim().trim_end_matches('.').to_ascii_lowercase())
+        .filter(|item| !item.is_empty() && item.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'.' || c == b'-'))
+        .any(|item| if suffix { host.ends_with(&format!(".{item}")) } else { host == item })
+}
 
 /// Names and literals that resolve inside the machine or the user's LAN. The
 /// fetch runs in the core, outside the webview CSP, so without this check a URL
@@ -219,7 +218,8 @@ fn validate_texture_url(url: &str) -> Result<url::Url, String> {
         return Err("Скины из локальной сети лаунчер не забирает".into());
     }
     let allowed = TEXTURE_HOSTS.contains(&host.as_str())
-        || TEXTURE_HOST_SUFFIXES.iter().any(|s| host.ends_with(s));
+        || host_in_configured_list(&host, MCPC_TEXTURE_HOSTS, false)
+        || host_in_configured_list(&host, MCPC_TEXTURE_HOST_SUFFIXES, true);
     if !allowed {
         return Err(format!("Скины берём только с проверенных сайтов: {}", TEXTURE_HOSTS.join(", ")));
     }
@@ -331,19 +331,19 @@ mod tests {
         // (input, should be accepted, why this case exists)
         let cases: &[(&str, bool, &str)] = &[
             ("https://textures.minecraft.net/texture/abc", true, "Mojang texture CDN is where player skins live"),
-            ("https://api.millida.net/v2/heads/skin/Notch", true, "import by nickname goes through our own renderer"),
-            ("https://api.millida.net/v2/skins/1.png", true, "wardrobe textures come from our own API"),
-            ("https://cdn.millida.net/skins/1.png", true, "our CDN is covered by the .millida.net suffix"),
-            ("https://cdn.millida.trade/launcher/capes/1.png", true, "wardrobe skins and capes are stored on this CDN"),
+            ("https://api.mcpc.example/v2/heads/skin/Notch", true, "import by nickname goes through the configured MCPC renderer"),
+            ("https://api.mcpc.example/v2/skins/1.png", true, "wardrobe textures come from the configured MCPC API"),
+            ("https://cdn.mcpc.example/skins/1.png", true, "MCPC CDN host"),
+            ("https://cdn.mcpc.example/launcher/capes/1.png", true, "MCPC CDN host"),
             ("https://cdn.modrinth.com/data/x/icon.png", true, "modpack assets are served by the Modrinth CDN"),
-            ("  https://api.millida.net/v2/heads/skin/Notch  ", true, "pasted links carry surrounding whitespace"),
-            ("HTTPS://API.MILLIDA.NET/v2/heads/skin/Notch", true, "scheme and host comparison must be case-insensitive"),
-            ("https://api.millida.net./v2/heads/skin/Notch", true, "a trailing root dot is the same host"),
-            ("http://api.millida.net/v2/heads/skin/Notch", false, "plain http would let a proxy swap the texture"),
+            ("  https://api.mcpc.example/v2/heads/skin/Notch  ", true, "pasted links carry surrounding whitespace"),
+            ("HTTPS://API.MCPC.EXAMPLE/v2/heads/skin/Notch", true, "scheme and host comparison must be case-insensitive"),
+            ("https://api.mcpc.example./v2/heads/skin/Notch", true, "a trailing root dot is the same host"),
+            ("http://api.mcpc.example/v2/heads/skin/Notch", false, "plain http would let a proxy swap the texture"),
             ("https://evil.example.com/x.png", false, "an arbitrary host is the SSRF the allowlist exists for"),
-            ("https://api.millida.net.evil.com/x.png", false, "suffix trick: the real host is evil.com"),
-            ("https://millida.net.evil.com/x.png", false, "the .millida.net suffix must not match as a prefix"),
-            ("https://cdn.millida.trade.evil.com/x.png", false, "the .millida.trade suffix must not match as a prefix"),
+            ("https://api.mcpc.example.evil.com/x.png", false, "suffix trick: the real host is evil.com"),
+            ("https://mcpc.example.evil.com/x.png", false, "the .mcpc.example suffix must not match as a prefix"),
+            ("https://cdn.mcpc.example.evil.com/x.png", false, "the .mcpc.example suffix must not match as a prefix"),
             ("https://127.0.0.1/x.png", false, "loopback reaches services bound to the user's machine"),
             ("https://localhost:8080/x.png", false, "localhost is loopback by name"),
             ("https://192.168.1.1/x.png", false, "private LAN addresses expose the user's router"),
@@ -354,8 +354,8 @@ mod tests {
             ("https://router.local/x.png", false, "mDNS names resolve inside the LAN"),
             ("file:///C:/Windows/win.ini", false, "file: would read the local filesystem"),
             ("data:image/png;base64,AAAA", false, "data: is not a fetchable host"),
-            ("https://api.millida.net/\r\nHeader: x", false, "CR/LF enable request splitting"),
-            ("https://api.millida.net/\0evil", false, "NUL truncates the URL in C-string based APIs"),
+            ("https://api.mcpc.example/\r\nHeader: x", false, "CR/LF enable request splitting"),
+            ("https://api.mcpc.example/\0evil", false, "NUL truncates the URL in C-string based APIs"),
             ("", false, "empty input is not a URL"),
         ];
 
