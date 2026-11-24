@@ -10,6 +10,25 @@ pub const MCPC_API_BASE: &str = match option_env!("MCPC_API_BASE_URL") {
     None => "https://api.mcpc.example/v2",
 };
 
+/// Parse and constrain the configured API root before any request can attach
+/// an account bearer token. Production endpoints must use HTTPS and exactly /v2.
+fn api_base_from(raw: &str) -> Result<url::Url, String> {
+    let mut base = url::Url::parse(raw.trim_end_matches('/'))
+        .map_err(|_| "MCPC_API_BASE_URL must be an HTTPS URL ending in /v2".to_string())?;
+    let valid = base.scheme() == "https:"
+        && base.host().is_some()
+        && base.username().is_empty()
+        && base.password().is_none()
+        && base.query().is_none()
+        && base.fragment().is_none()
+        && base.path().trim_end_matches('/') == "/v2";
+    if !valid {
+        return Err("MCPC_API_BASE_URL must be an HTTPS origin ending in /v2".into());
+    }
+    base.set_path("/v2/");
+    Ok(base)
+}
+
 /// The API `message` field is either a string or a list of validator messages.
 pub fn api_error_message(text: &str) -> Option<String> {
     let v: Value = serde_json::from_str(text).ok()?;
@@ -51,7 +70,7 @@ fn api_url(path: &str) -> Result<url::Url, String> {
     if segments.split(['/', '\\']).any(is_dot_segment) {
         return Err("bad path".into());
     }
-    let base = url::Url::parse(&format!("{}/", MCPC_API_BASE.trim_end_matches('/'))).map_err(|_| "bad path".to_string())?;
+    let base = api_base_from(MCPC_API_BASE)?;
     let resolved = base.join(&path[1..]).map_err(|_| "bad path".to_string())?;
     let same_origin = resolved.scheme() == base.scheme()
         && resolved.host() == base.host()
@@ -1079,7 +1098,7 @@ mod tests {
     }
 
     use super::{
-        api_url, etag_key, insufficient_funds_detail, lang_header, tz_header, login_poll_answer, market_header, refresh_on_cooldown, remember_in, repeatable, webview_path_allowed, set_refresh_cooldown,
+        api_base_from, api_url, etag_key, insufficient_funds_detail, lang_header, tz_header, login_poll_answer, market_header, refresh_on_cooldown, remember_in, repeatable, webview_path_allowed, set_refresh_cooldown,
         upload_route_allowed, verdict_for, without_refresh_token, mod_token_of, ModToken, RefreshVerdict, Refreshed, Tagged, ETAG_CACHE_BUDGET, MCPC_API_BASE, UNAUTHORIZED,
     };
     use std::collections::BTreeMap;
@@ -1330,6 +1349,22 @@ mod tests {
         );
         set_refresh_cooldown(false);
         assert!(!refresh_on_cooldown(), "a successful refresh must clear the block");
+    }
+
+    #[test]
+    fn api_base_requires_https_and_the_v2_root() {
+        let accepted = api_base_from("https://api.mcpc.example/v2/").unwrap();
+        assert_eq!(accepted.as_str(), "https://api.mcpc.example/v2/");
+        for invalid in [
+            "http://api.mcpc.example/v2",
+            "https://api.mcpc.example/v1",
+            "https://api.mcpc.example/v2/other",
+            "https://user:secret@api.mcpc.example/v2",
+            "https://api.mcpc.example/v2?redirect=example",
+            "https://api.mcpc.example/v2#fragment",
+        ] {
+            assert!(api_base_from(invalid).is_err(), "accepted unsafe API root: {invalid}");
+        }
     }
 
     #[test]
