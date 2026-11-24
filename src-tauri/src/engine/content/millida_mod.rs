@@ -1,5 +1,5 @@
-// Installs the Millida mod (skins, cosmetics) into the player's modpacks and updates it.
-// The version list comes from cdn.millida.net/mod, the jar is downloaded from there and checked against the sha256 from the list. The list is also signed with the Millida key. The list of blocked versions is api.millida.net/v2/launcher/mod/blocked.
+// Installs the MCPC mod (skins, cosmetics) into the player's modpacks and updates it.
+// The version list comes from cdn.mcpc.example/mod, the jar is downloaded from there and checked against the sha256 from the list. The list is also signed with the Millida key. The list of blocked versions is api.mcpc.example/v2/launcher/mod/blocked.
 // Can be turned off in settings. Mod summaries are switched off by the statistics switch.
 use crate::engine::*;
 use serde_json::Value;
@@ -7,12 +7,12 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 // Mod version list on the Millida CDN.
-const MANIFEST_URL: &str = "https://cdn.millida.net/mod/variants.json";
+const MANIFEST_URL: &str = match option_env!("MCPC_MOD_MANIFEST_URL") { Some(v) => v, None => "https://cdn.mcpc.example/mod/variants.json" };
 // Mod version list of the testing channel, read only when the player opted into test versions.
-const BETA_MANIFEST_URL: &str = "https://cdn.millida.net/mod/beta.json";
+const BETA_MANIFEST_URL: &str = match option_env!("MCPC_MOD_BETA_MANIFEST_URL") { Some(v) => v, None => "https://cdn.mcpc.example/mod/beta.json" };
 // Kill switch: mod versions the launcher must not install (crashes).
-const BLOCKED_URL: &str = "https://api.millida.net/v2/launcher/mod/blocked";
-const MOD_BASE: &str = "https://cdn.millida.net/mod";
+const BLOCKED_URL: &str = match option_env!("MCPC_MOD_BLOCKED_URL") { Some(v) => v, None => "https://api.mcpc.example/v2/launcher/mod/blocked" };
+const MOD_BASE: &str = match option_env!("MCPC_MOD_BASE_URL") { Some(v) => v, None => "https://cdn.mcpc.example/mod" };
 
 /// The jar comes only from our CDN folder: a `baseUrl` in the manifest counts
 /// only inside it, so a swapped manifest cannot point the download elsewhere.
@@ -185,7 +185,9 @@ fn signed_jar_sha256s(manifests: impl Iterator<Item = Value>) -> std::collection
 /// подписывает список вариантов: сервер или CDN без закрытой части не может
 /// подсунуть в игру другой jar — его sha256 стоит в подписанной строке.
 // Public minisign key in base64 (it contains the text "minisign public key"). The private part is kept in the mod CI and is not in this repository.
-const MOD_MANIFEST_PUBKEY: &str = "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDBCMjA5MkFGRDhCODAzOEMKUldTTUE3allyNUlnQ3haTTFKZnlLcjExcFIybGRjVlMrSzNvQzZiQjNLbVY2cEJUVW5lUXZNdDAK";
+const MOD_MANIFEST_PUBKEY: &str = match option_env!("MCPC_MOD_MANIFEST_PUBKEY") { Some(v) => v, None => "" };
+#[cfg(test)]
+const TEST_MOD_MANIFEST_PUBKEY: &str = "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDBCMjA5MkFGRDhCODAzOEMKUldTTUE3allyNUlnQ3haTTFKZnlLcjExcFIybGRjVlMrSzNvQzZiQjNLbVY2cEJUVW5lUXZNdDAK";
 
 #[derive(Debug, PartialEq, Eq)]
 enum ManifestSignature {
@@ -198,7 +200,7 @@ enum ManifestSignature {
 /// варианта по порядку. Не зависит от пробелов и порядка ключей json.
 fn manifest_canonical(m: &Value) -> Option<String> {
     let version = m["version"].as_str()?;
-    let mut out = format!("millida-mod-manifest-v1\nversion={}\n", version);
+    let mut out = format!("mcpc-mod-manifest-v1\nversion={}\n", version);
     for v in m["variants"].as_array()? {
         let artifact = v["artifact"].as_str()?.replace("{version}", version);
         let sha = v["sha256"].as_str()?.to_lowercase();
@@ -514,18 +516,18 @@ fn state_after(profile: &str, mut state: MillidaModState) -> Result<MillidaModSt
 fn write_settings(dir: &Path, licensed: bool) -> Result<(), String> {
     let cfg_dir = dir.join("config");
     std::fs::create_dir_all(&cfg_dir).map_err(|e| e.to_string())?;
-    let path = cfg_dir.join("millida.json");
+    let path = cfg_dir.join("mcpc.json");
     let mut cfg = std::fs::read(&path)
         .ok()
         .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
         .and_then(|v| v.as_object().cloned())
         .unwrap_or_default();
-    cfg.insert("apiRoot".into(), Value::String(MILLIDA_API.to_string()));
+    cfg.insert("apiRoot".into(), Value::String(MCPC_API_BASE.to_string()));
     // Millida, потом файлы игрока. Лицензионный профиль спрашиваем последним и
     // только если аккаунт и правда мояновский: иначе этот ник там принадлежит
     // постороннему, и игрок увидит чужой скин.
     let order: Vec<Value> = if licensed {
-        ["millida", "local", "mojang"].iter().map(|s| Value::String((*s).into())).collect()
+        ["mcpc", "local", "mojang"].iter().map(|s| Value::String((*s).into())).collect()
     } else {
         ["millida", "local"].iter().map(|s| Value::String((*s).into())).collect()
     };
@@ -534,8 +536,8 @@ fn write_settings(dir: &Path, licensed: bool) -> Result<(), String> {
     let hosts = cfg.entry("textureHosts".to_string()).or_insert_with(|| Value::Array(vec![]));
     if let Some(list) = hosts.as_array_mut() {
         // The same hosts the launcher shows textures from: head and skin renders and the CustomSkinAPI
-        // redirect live on api.millida.net, wardrobe uploads on millida.trade (skins/library.rs TEXTURE_HOSTS).
-        for host in ["millida.net", "cdn.millida.net", "api.millida.net", "cdn.millida.trade", "millida.trade", "textures.minecraft.net"] {
+        // redirect live on api.mcpc.example, wardrobe uploads on cdn.mcpc.example (skins/library.rs TEXTURE_HOSTS).
+        for host in ["mcpc.example", "cdn.mcpc.example", "api.mcpc.example", "cdn.cdn.mcpc.example", "cdn.mcpc.example", "textures.minecraft.net"] {
             if !list.iter().any(|h| h.as_str() == Some(host)) {
                 list.push(Value::String(host.into()));
             }
@@ -1621,26 +1623,26 @@ mod tests {
         let signed = json!({
             "formatVersion": 1,
             "version": "0.2.11",
-            "baseUrl": "https://cdn.millida.net/mod",
+            "baseUrl": "https://cdn.mcpc.example/mod",
             "variants": [
                 { "id": "fabric-1.21.1", "artifact": "millida-mod-fabric-1.21.1-0.2.11.jar", "sha256": "AB12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12", "size": 123456 },
                 { "id": "forge-1.20.1", "artifact": "millida-mod-forge-1.20.1-0.2.11.jar", "sha256": "cd34cd34cd34cd34cd34cd34cd34cd34cd34cd34cd34cd34cd34cd34cd34cd34", "size": 654321 }
             ],
             "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTTUE3allyNUlnQzBGT3VCTUVFNFFzaXhha1BkZVIybHF6V00zTS81aTFNNy9CTndDbnBGZ0I4OVdocDFZb3RJUUtzZFFzYmc5TWFidWM2bldYb08yNzhwdTV6YkZlUWdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxNzA4Mjk0CWZpbGU6dmFyaWFudHMuY2Fub25pY2FsCndwYjJyazV2elo4M1VzL1Z5MTZrNHU0eStrQ0JzSHhWZ0xZSFVLQnNZc09xVDdmTnZWSmNtNFJjTzdwM083eTQrdmNPNytxak1QR2V0K0paUDFmR0R3PT0K"
         });
-        assert_eq!(manifest_signature(&signed, MOD_MANIFEST_PUBKEY), ManifestSignature::Valid, "список, подписанный CI мода");
+        assert_eq!(manifest_signature(&signed, TEST_MOD_MANIFEST_PUBKEY), ManifestSignature::Valid, "список, подписанный CI мода");
         let mut swapped = signed.clone();
         swapped["variants"][0]["sha256"] = json!("ef56ef56ef56ef56ef56ef56ef56ef56ef56ef56ef56ef56ef56ef56ef56ef56");
-        assert_eq!(manifest_signature(&swapped, MOD_MANIFEST_PUBKEY), ManifestSignature::Invalid, "подменённый jar не проходит");
+        assert_eq!(manifest_signature(&swapped, TEST_MOD_MANIFEST_PUBKEY), ManifestSignature::Invalid, "подменённый jar не проходит");
         let mut extra = signed.clone();
         extra["variants"].as_array_mut().unwrap().push(json!({ "artifact": "evil.jar", "sha256": "00", "size": 1 }));
-        assert_eq!(manifest_signature(&extra, MOD_MANIFEST_PUBKEY), ManifestSignature::Invalid, "добавленный вариант не проходит");
+        assert_eq!(manifest_signature(&extra, TEST_MOD_MANIFEST_PUBKEY), ManifestSignature::Invalid, "добавленный вариант не проходит");
         let mut unsigned = signed.clone();
         unsigned.as_object_mut().unwrap().remove("signature");
-        assert_eq!(manifest_signature(&unsigned, MOD_MANIFEST_PUBKEY), ManifestSignature::Missing);
+        assert_eq!(manifest_signature(&unsigned, TEST_MOD_MANIFEST_PUBKEY), ManifestSignature::Missing);
         let mut cosmetic = signed.clone();
         cosmetic["comment"] = json!("пробелы и новые поля подпись не ломают");
-        assert_eq!(manifest_signature(&cosmetic, MOD_MANIFEST_PUBKEY), ManifestSignature::Valid);
+        assert_eq!(manifest_signature(&cosmetic, TEST_MOD_MANIFEST_PUBKEY), ManifestSignature::Valid);
     }
 
     #[test]
@@ -1730,13 +1732,13 @@ mod tests {
     #[test]
     fn the_mod_jar_comes_only_from_our_cdn_folder() {
         let cases = [
-            ("https://cdn.millida.net/mod", true, "обычная база"),
-            ("https://cdn.millida.net/mod/", true, "со слэшем"),
-            ("https://cdn.millida.net/mod/beta", true, "подпапка нашей же папки"),
-            ("https://cdn.millida.net/modx", false, "соседняя папка с похожим именем"),
-            ("https://cdn.millida.net/mod/../other", false, "выход из папки"),
+            ("https://cdn.mcpc.example/mod", true, "обычная база"),
+            ("https://cdn.mcpc.example/mod/", true, "со слэшем"),
+            ("https://cdn.mcpc.example/mod/beta", true, "подпапка нашей же папки"),
+            ("https://cdn.mcpc.example/modx", false, "соседняя папка с похожим именем"),
+            ("https://cdn.mcpc.example/mod/../other", false, "выход из папки"),
             ("https://evil.example/mod", false, "чужой хост"),
-            ("http://cdn.millida.net/mod", false, "без https"),
+            ("http://cdn.mcpc.example/mod", false, "без https"),
         ];
         for (base, want, why) in cases {
             assert_eq!(mod_base_allowed(base), want, "{}", why);
