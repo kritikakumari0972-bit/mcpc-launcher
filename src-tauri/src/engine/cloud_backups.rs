@@ -114,7 +114,7 @@ fn api_problem(e: String) -> String {
         return UNREACHABLE.into();
     }
     if e == UNAUTHORIZED {
-        return "Сессия Millida закончилась — войди в аккаунт заново".into();
+        return "Сессия MCPC закончилась — войди в аккаунт заново".into();
     }
     e
 }
