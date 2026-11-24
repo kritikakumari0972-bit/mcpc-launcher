@@ -3,20 +3,17 @@
 use crate::engine::*;
 use serde_json::Value;
 
-/// Azure application client_id, baked in at compile time. Own builds should set
-/// MILLIDA_MS_CLIENT_ID to their own registration.
-// Public Azure application id, not a secret. Custom builds set their own through MILLIDA_MS_CLIENT_ID.
-const MS_CLIENT_ID_FALLBACK: &str = "499c8d36-be2a-4231-9ebd-ef291b7bb64c";
-
-pub(crate) fn ms_client_id() -> &'static str {
-    match option_env!("MILLIDA_MS_CLIENT_ID") {
-        Some(v) if !v.trim().is_empty() => v.trim(),
-        _ => MS_CLIENT_ID_FALLBACK,
+/// Azure application client_id for this independent build. Register an MCPC app in Microsoft Entra ID
+/// and set MCPC_MS_CLIENT_ID at compile time. No other publisher's client ID is bundled.
+pub(crate) fn ms_client_id() -> Result<&'static str, String> {
+    match option_env!("MCPC_MS_CLIENT_ID") {
+        Some(v) if !v.trim().is_empty() => Ok(v.trim()),
+        _ => Err("Microsoft sign-in is not configured. Build MCPC Launcher with your own MCPC_MS_CLIENT_ID.".into()),
     }
 }
 
 pub async fn ms_device_start() -> Result<Value, String> {
-    let client_id = ms_client_id();
+    let client_id = ms_client_id()?;
     let r = client()
         // Step one: ask Microsoft for a login code. client_id and the list of scopes are sent.
         .post("https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode")
@@ -82,7 +79,7 @@ pub async fn ms_device_poll(device_code: String) -> Result<Value, String> {
 }
 
 async fn redeem_device_code(device_code: String) -> Result<Option<(String, String)>, String> {
-    let client_id = ms_client_id();
+    let client_id = ms_client_id()?;
     let r = client()
         // Polls Microsoft: has the user signed in on the code page yet.
         .post("https://login.microsoftonline.com/consumers/oauth2/v2.0/token")
@@ -229,7 +226,7 @@ pub(crate) fn grant_gone(text: &str) -> bool {
 /// the rotated refresh_token (the old one when Microsoft keeps it). The Xbox and Minecraft steps
 /// follow in `ms_session_refresh`, which keeps the rotated token even if they fail.
 pub(crate) async fn ms_refresh_token(refresh_token: &str) -> Result<(String, String), String> {
-    let client_id = ms_client_id();
+    let client_id = ms_client_id()?;
     let r = client()
         .post("https://login.microsoftonline.com/consumers/oauth2/v2.0/token")
         .form(&[
