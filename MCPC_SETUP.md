@@ -13,7 +13,7 @@ This fork is deliberately separated from the original launcher's infrastructure.
 | MCPC_VOICE_RELAY_DOMAINS | Comma-separated MCPC-owned voice relay domains | Empty (voice disabled) |
 | VITE_MCPC_UPDATES_ENABLED | Enable own signed update feed | false |
 
-The .example hostname is reserved and is not a working API. It prevents an unconfigured fork from contacting the original publisher.
+The .example hostname is reserved and is not a working API. It prevents an unconfigured fork from contacting the original publisher. Set MCPC_API_BASE_URL, MCPC_MS_CLIENT_ID and MCPC_VOICE_RELAY_DOMAINS in the shell before compiling the Rust core; VITE_MCPC_API_BASE_URL is read by Vite.
 
 ## Backend contract
 
