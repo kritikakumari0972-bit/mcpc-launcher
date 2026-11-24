@@ -1,6 +1,6 @@
 // Pure rules of the website-screen bridge (src/lib/remoteUiBridge.ts): which API paths a screen may call
 // and which links it may open. No imports, so the rules are unit-tested on their own.
-export const REMOTE_UI_SITE = 'https://millida.net'
+export const REMOTE_UI_SITE = import.meta.env.VITE_MCPC_REMOTE_UI_SITE || 'https://mcpc.example'
 
 export interface RemoteJoinServer {
   address: string
