@@ -169,7 +169,7 @@ fn host_in_configured_list(host: &str, list: &str, suffix: bool) -> bool {
     list.split(',')
         .map(|item| item.trim().trim_end_matches('.').to_ascii_lowercase())
         .filter(|item| !item.is_empty() && item.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'.' || c == b'-'))
-        .any(|item| if suffix { host.ends_with(&format!(".{item}")) } else { host == item })
+        .any(|item| if suffix { host.ends_with(&format!(".{item}")) } else { host == item.as_str() })
 }
 
 /// Names and literals that resolve inside the machine or the user's LAN. The
