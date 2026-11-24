@@ -17,6 +17,8 @@ This fork is deliberately separated from the original launcher's infrastructure.
 | MCPC_MOD_BLOCKED_URL | MCPC mod kill-switch endpoint | .example (disabled) |
 | MCPC_MOD_BASE_URL | MCPC mod artifact base URL | .example (disabled) |
 | MCPC_MOD_MANIFEST_PUBKEY | MCPC minisign public key (base64 text wrapper) | Empty (mod installs fail closed) |
+| MCPC_TEXTURE_HOSTS | Exact MCPC skin/texture hostnames, comma-separated | Empty |
+| MCPC_TEXTURE_HOST_SUFFIXES | MCPC-owned skin/texture DNS suffixes, comma-separated | Empty |
 | VITE_MCPC_UPDATES_ENABLED | Enable own signed update feed | false |
 | VITE_MCPC_REMOTE_UI_ENABLED | Enable remote signed MCPC screens | false |
 | VITE_MCPC_REMOTE_UI_BASE_URL | MCPC remote UI bundle root | https://ui.mcpc.example/launcher-ui |
