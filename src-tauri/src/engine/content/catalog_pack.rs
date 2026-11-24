@@ -14,7 +14,10 @@ use tauri::AppHandle;
 /// compromised or simply mistaken API answer must not be able to point the
 /// launcher at another host, so the verdict is taken here and not upstream.
 // The only host we accept a modpack archive from (checked in pack_url_allowed).
-const PACK_HOST: &str = "garage.millida.net";
+const PACK_HOST: &str = match option_env!("MCPC_PACK_HOST") {
+    Some(v) => v,
+    None => "packs.mcpc.example",
+};
 
 const MANIFEST_NAME: &str = "millida.pack.json";
 
@@ -223,7 +226,7 @@ async fn fetch_pack(app: &AppHandle, job: &Job, slug: &str, review: bool, reuse:
         let answer = pack_review_candidate(slug).await?;
         view_from_candidate(slug, &answer)?
     } else {
-        // Request for the modpack card to api.millida.net. The Millida token is added if the user is logged in.
+        // Request for the modpack card to api.mcpc.example. The MCPC token is added if the user is logged in.
         millida_api(format!("/catalog/packs/{}", slug), "GET".into(), None, millida_token()).await?
     };
     let (file_id, size, sha512) = client_file(&view)?;
@@ -540,7 +543,7 @@ fn pack_identity(
 }
 
 /// A build started offline still knows whether our card opted it into the
-/// Millida mod.
+/// MCPC mod.
 fn remember_mod_opt_in(settings: &mut serde_json::Map<String, Value>, view: &Value) {
     if let Some(on) = pack_millida_mod_flag(view) {
         settings.insert(PACK_MILLIDA_MOD_KEY.into(), Value::Bool(on));
@@ -561,7 +564,7 @@ pub async fn update_catalog_pack(app: AppHandle, profile: String) -> Result<Prof
         .map(str::trim)
         .filter(|s| slug_ok(s))
         .map(String::from)
-        .ok_or("Эта сборка поставлена не из каталога Millida — обновлять её неоткуда")?;
+        .ok_or("Эта сборка поставлена не из каталога MCPC — обновлять её неоткуда")?;
     let job = Job::start(job_key_catalog_pack(&slug), profile.clone())?;
     let res = update_catalog_pack_job(&app, &job, &current, &slug).await;
     job.finish(&app, res)
@@ -914,12 +917,12 @@ mod tests {
     /// to download gigabytes from it and unpack them into a game folder.
     #[test]
     fn only_our_storage_may_serve_a_pack() {
-        let good = "https://garage.millida.net/mcpc-packs/catalog/packs/a/a-1-client.zip?X-Amz-Signature=x";
+        let good = "https://packs.mcpc.example/mcpc-packs/catalog/packs/a/a-1-client.zip?X-Amz-Signature=x";
         assert!(pack_url_allowed(good), "«{good}» — обычная подписанная ссылка хранилища");
         for bad in [
-            "http://garage.millida.net/x.zip",
-            "https://garage.millida.net.evil.example/x.zip",
-            "https://evil.example/garage.millida.net/x.zip",
+            "http://packs.mcpc.example/x.zip",
+            "https://packs.mcpc.example.evil.example/x.zip",
+            "https://evil.example/packs.mcpc.example/x.zip",
             "https://127.0.0.1/x.zip",
             "file:///C:/Windows/System32/x.dll",
             "",
@@ -940,7 +943,7 @@ mod tests {
     fn pack_archive_brings_no_launcher_service_files() {
         let cases: &[(&str, bool, &str)] = &[
             ("millida-pack-launch.json", true, "описание запуска в корне читает проверка каталога, а запускает его только сборка из каталога"),
-            ("Millida-Pack-Launch.json", false, "другое написание проверка не сверяет, а Windows всё равно откроет его как описание запуска"),
+            ("MCPC-Pack-Launch.json", false, "другое написание проверка не сверяет, а Windows всё равно откроет его как описание запуска"),
             ("config/millida-pack-launch.json", false, "вложенную копию никто не проверял; правило то же, что у overrides"),
             ("millida-settings.json", false, "в настройках сборки лежат JVM-флаги — это запуск чужого кода"),
             ("millida-content.json", false, "по адресам из этой записи «Починить» качает моды в mods/"),
@@ -1087,7 +1090,7 @@ mod tests {
     #[test]
     fn only_a_refusal_of_the_service_opens_the_key_window() {
         let cases: &[(bool, &str, bool, &str)] = &[
-            (true, "Сборка доступна по подписке — оформите её в лаунчере или на millida.net", true, "отказ сервера по доступу"),
+            (true, "Сборка доступна по подписке — оформите её в лаунчере или на mcpc.example", true, "отказ сервера по доступу"),
             (true, "http 403", true, "отказ без текста всё равно ответ сервера"),
             (true, "нет связи (operation timed out — сервер не ответил вовремя: проверь интернет и VPN)", false, "01.11 у игрока с доступом таймаут открыл окно покупки"),
             (true, "нет связи (failed to lookup address information — адрес сервера не определился: проверь DNS, VPN и антивирус)", false, "DNS не ответил — сервер доступа не проверял"),
