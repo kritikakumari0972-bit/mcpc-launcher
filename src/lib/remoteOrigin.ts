@@ -3,7 +3,7 @@
 // it imports nothing, so the dictionaries can use it without pulling React in.
 
 // Public half of the signing key (raw Ed25519, base64). The private key never leaves the site's CI.
-export const REMOTE_UI_PUBLIC_KEY = 'TgYsbCG1NTtZWwyTeaj2dozeEUWkBxqgNmbhrr9frjE='
+export const REMOTE_UI_PUBLIC_KEY = import.meta.env.VITE_MCPC_REMOTE_UI_PUBLIC_KEY || ''
 
 export const REMOTE_UI_BASE: string =
   (import.meta.env.DEV && typeof localStorage !== 'undefined' && localStorage.getItem('m-ui-base')) ||
