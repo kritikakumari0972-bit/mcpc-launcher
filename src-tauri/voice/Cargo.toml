@@ -1,5 +1,5 @@
 [package]
-name = "millida-voice"
+name = "mcpc-voice"
 version = "0.1.0"
 description = "Party voice client for the MCPC voice service"
 edition = "2021"
