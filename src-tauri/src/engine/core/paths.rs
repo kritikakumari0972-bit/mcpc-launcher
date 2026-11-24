@@ -1,6 +1,65 @@
 // Where the launcher data lives: net.millida.launcher in the user data folder, the game root (inside it by default), moving the root, clearing the cache.
 // Only the cache (tmp and natives) and, once the new root is in use, the originals copied there are deleted.
 use std::path::PathBuf;
+use std::sync::OnceLock;
+
+const MCPC_DATA_DIR: &str = "io.github.kritikakumari0972.mcpc_launcher";
+const LEGACY_DATA_DIR: &str = "net.millida.launcher";
+
+/// Copy old launcher metadata into an MCPC-owned directory without moving or
+/// deleting the installed game folder. Symlinks and special files are rejected.
+fn copy_legacy_entries(src: &std::path::Path, dst: &std::path::Path, root: bool) -> std::io::Result<()> {
+    std::fs::create_dir_all(dst)?;
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let name = entry.file_name();
+        if root && name == "minecraft" {
+            continue; // Keep potentially multi-gigabyte game installations in place.
+        }
+        let source = entry.path();
+        let target = dst.join(&name);
+        let kind = entry.file_type()?;
+        if kind.is_dir() {
+            copy_legacy_entries(&source, &target, false)?;
+        } else if kind.is_file() {
+            std::fs::copy(&source, &target)?;
+        } else {
+            return Err(std::io::Error::new(std::io::ErrorKind::Other, "legacy data contains a symlink or special file"));
+        }
+    }
+    Ok(())
+}
+
+/// First-run migration is copy-only: old data is never removed. A temporary
+/// sibling directory is renamed into place only after every file has copied.
+fn migrate_legacy_data(base: &std::path::Path, legacy: &std::path::Path, target: &std::path::Path) -> std::io::Result<()> {
+    if target.exists() || !legacy.is_dir() {
+        return Ok(());
+    }
+    std::fs::create_dir_all(base)?;
+    let staging = base.join(format!(".mcpc-migration-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&staging);
+    let result = (|| {
+        copy_legacy_entries(legacy, &staging, true)?;
+        let old_default_game = legacy.join("minecraft");
+        let old_root_marker = legacy.join("game-root.txt");
+        if !old_root_marker.exists() && old_default_game.is_dir() {
+            std::fs::write(staging.join("game-root.txt"), old_default_game.to_string_lossy().as_bytes())?;
+        }
+        if target.exists() {
+            std::fs::remove_dir_all(&staging)?;
+        } else {
+            std::fs::rename(&staging, target)?;
+        }
+        Ok(())
+    })();
+    if result.is_err() {
+        let _ = std::fs::remove_dir_all(&staging);
+    }
+    result
+}
+
+static DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
 
 /// Inside Flatpak /app is read-only: self-update is handled by `flatpak update`
 /// and Java comes from the bundled SDK extension instead of Adoptium.
@@ -9,7 +68,18 @@ pub fn is_flatpak() -> bool {
 }
 
 pub fn data_dir() -> PathBuf {
-    dirs::data_dir().unwrap_or_else(|| PathBuf::from(".")).join("net.millida.launcher")
+    DATA_DIR.get_or_init(|| {
+        let base = dirs::data_dir().unwrap_or_else(|| PathBuf::from("."));
+        let target = base.join(MCPC_DATA_DIR);
+        let legacy = base.join(LEGACY_DATA_DIR);
+        if !target.exists() && legacy.is_dir() {
+            if let Err(error) = migrate_legacy_data(&base, &legacy, &target) {
+                eprintln!("[mcpc] legacy data migration failed; retaining the original data directory: {error}");
+                return legacy;
+            }
+        }
+        target
+    }).clone()
 }
 
 fn configured_root() -> Option<PathBuf> {
@@ -491,6 +561,26 @@ mod root_tests {
             assert!(game_root_candidate_ok(std::path::Path::new("/System/Library")).is_err());
             assert!(game_root_candidate_ok(std::path::Path::new("/usr")).is_err());
         }
+    }
+
+
+    #[test]
+    fn legacy_migration_copies_settings_but_keeps_game_files_in_place() {
+        let root = std::env::temp_dir().join(format!("mcpc-migration-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let legacy = root.join(LEGACY_DATA_DIR);
+        let target = root.join(MCPC_DATA_DIR);
+        std::fs::create_dir_all(legacy.join("minecraft/profiles/World")).unwrap();
+        std::fs::write(legacy.join("profiles.json"), b"[]").unwrap();
+        std::fs::write(legacy.join("minecraft/profiles/World/options.txt"), b"lang:en").unwrap();
+
+        migrate_legacy_data(&root, &legacy, &target).unwrap();
+
+        assert_eq!(std::fs::read(target.join("profiles.json")).unwrap(), b"[]");
+        assert!(target.join("game-root.txt").exists(), "the new data directory must continue using the existing game root");
+        assert!(legacy.join("minecraft/profiles/World/options.txt").exists(), "the original game data must remain untouched");
+        assert!(!target.join("minecraft").exists(), "do not duplicate the installed game directory");
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
