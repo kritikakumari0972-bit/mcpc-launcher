@@ -10,15 +10,16 @@ pub const PACK_PROTECTED_KEY: &str = "catalogPackProtected";
 /// put there: a picture with another fingerprint is the player's own choice.
 pub const PACK_ICON_KEY: &str = "catalogPackIcon";
 
-// The only places we take the modpack icon from: the trade bucket under its own
-// host and under /t/ on cdn.millida.net, where the API points it while the
-// own host is unreachable from Russia.
-const ICON_SOURCES: [(&str, &str); 2] = [("cdn.millida.trade", "/"), ("cdn.millida.net", "/t/")];
+// Only the MCPC-owned pack CDN may supply catalogue icons. Configure the host at build time.
+const MCPC_PACK_ICON_HOST: &str = match option_env!("MCPC_PACK_ICON_HOST") {
+    Some(v) => v,
+    None => "cdn.mcpc.example",
+};
 const ICON_MAX_BYTES: usize = 2 * 1024 * 1024;
 const ICON_WAIT: std::time::Duration = std::time::Duration::from_secs(20);
 
 pub const PROTECTED_REFUSAL: &str =
-    "Автор сборки закрыл её содержимое — поделиться можно ссылкой на сборку в каталоге Millida";
+    "Автор сборки закрыл её содержимое — поделиться можно ссылкой на сборку в каталоге MCPC";
 
 /// Only a boolean from our card counts: an older API without the field says
 /// nothing, and nothing must not switch the protection off.
@@ -79,8 +80,7 @@ fn icon_url_allowed(raw: &str) -> bool {
     if url.scheme() != "https" || url.port().is_some() || !url.username().is_empty() {
         return false;
     }
-    let Some(host) = url.host_str() else { return false };
-    ICON_SOURCES.iter().any(|(h, prefix)| host == *h && url.path().starts_with(prefix))
+    url.host_str() == Some(MCPC_PACK_ICON_HOST)
 }
 
 #[derive(Debug, PartialEq)]
@@ -189,20 +189,20 @@ mod tests {
     use super::*;
     use serde_json::json;
 
-    const ICON: &str = "https://cdn.millida.trade/catalog/launcher-packs/oneblock-metalabs/2026-09-27/oneblock-icon.png";
+    const ICON: &str = "https://cdn.mcpc.example/catalog/launcher-packs/oneblock-metalabs/2026-09-27/oneblock-icon.png";
 
     /// (card icon, build icon, marker) -> does the build take the card's icon.
     #[test]
     fn the_catalogue_icon_never_replaces_the_players_choice() {
         let ours = "data:image/png;base64,AAAA";
         let marked = json!({ "from": ICON, "sum": sha256_hex(ours.as_bytes()), "px": COVER_PX });
-        let older = json!({ "from": "https://cdn.millida.trade/old.png", "sum": sha256_hex(ours.as_bytes()), "px": COVER_PX });
+        let older = json!({ "from": "https://cdn.mcpc.example/old.png", "sum": sha256_hex(ours.as_bytes()), "px": COVER_PX });
         let blurry = json!({ "from": ICON, "sum": sha256_hex(ours.as_bytes()) });
         let cases: [(&str, Option<&str>, Value, IconStep, &str); 13] = [
             (ICON, Some(ours), blurry, IconStep::Apply, "our icon taken at the old 128 px is redrawn sharper"),
             (ICON, None, Value::Null, IconStep::Apply, "a build without an icon shows the bookshelf; the pack has its own"),
             (ICON, Some(""), Value::Null, IconStep::Apply, "an empty icon is no choice"),
-            (ICON, Some("https://cdn.millida.trade/x/banner.png"), Value::Null, IconStep::Apply, "older launchers put the cover there, the player never did"),
+            (ICON, Some("https://cdn.mcpc.example/x/banner.png"), Value::Null, IconStep::Apply, "older launchers put the cover there, the player never did"),
             (ICON, Some("/bg/forest.jpg"), Value::Null, IconStep::Apply, "the old wallpaper default reads as the default icon"),
             (ICON, Some("/build-icons/grass.png#bg=1f3b22"), Value::Null, IconStep::Keep, "a block the player picked stays"),
             (ICON, Some("data:image/png;base64,BBBB"), marked.clone(), IconStep::Keep, "the player's own picture stays even when we once set ours"),
@@ -211,7 +211,7 @@ mod tests {
             (ICON, Some(ours), json!({ "from": ICON, "sum": 1 }), IconStep::Keep, "the settings file is on the player's disk: a broken marker proves nothing"),
             ("", None, Value::Null, IconStep::Keep, "a card without an icon leaves the build as it is"),
             ("https://evil.example/icon.png", None, Value::Null, IconStep::Keep, "the icon is downloaded only from our CDN"),
-            ("http://cdn.millida.trade/icon.png", None, Value::Null, IconStep::Keep, "plain http can be swapped on the way"),
+            ("http://cdn.mcpc.example/icon.png", None, Value::Null, IconStep::Keep, "plain http can be swapped on the way"),
         ];
         for (card, current, marker, want, why) in cases {
             assert_eq!(catalog_icon_step(card, current, &marker), want, "{}", why);
@@ -222,12 +222,12 @@ mod tests {
     fn only_our_cdn_serves_pack_icons() {
         let cases: [(&str, bool, &str); 9] = [
             (ICON, true, "the catalogue stores pack icons here"),
-            ("https://cdn.millida.net/t/catalog/launcher-packs/oneblock-metalabs/2026-09-27/oneblock-icon.png", true, "the same bucket under the host reachable from Russia"),
-            ("https://cdn.millida.net/catalog/i.png", false, "outside /t/ cdn.millida.net is another bucket"),
-            ("https://cdn.millida.net.evil.example/t/i.png", false, "a look-alike of the new host is not ours either"),
-            ("https://cdn.millida.trade.evil.example/i.png", false, "a look-alike host is not ours"),
-            ("https://cdn.millida.trade:8443/i.png", false, "our CDN has no other port"),
-            ("https://user@cdn.millida.trade/i.png", false, "credentials in the address are a disguise"),
+            ("https://cdn.mcpc.example/t/catalog/launcher-packs/oneblock-metalabs/2026-09-27/oneblock-icon.png", true, "the same bucket under the host reachable from Russia"),
+            ("https://cdn.mcpc.example/catalog/i.png", false, "outside /t/ cdn.mcpc.example is another bucket"),
+            ("https://cdn.mcpc.example.evil.example/t/i.png", false, "a look-alike of the new host is not ours either"),
+            ("https://cdn.mcpc.example.evil.example/i.png", false, "a look-alike host is not ours"),
+            ("https://cdn.mcpc.example:8443/i.png", false, "our CDN has no other port"),
+            ("https://user@cdn.mcpc.example/i.png", false, "credentials in the address are a disguise"),
             ("https://127.0.0.1/i.png", false, "loopback is never a pack icon"),
             ("not a url", false, "garbage from the card is refused"),
         ];
