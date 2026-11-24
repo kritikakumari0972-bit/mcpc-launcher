@@ -26,11 +26,10 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 // Public application id from the Discord Developer Portal. Discord needs it to show the name and pictures. It is not a secret.
-const DEFAULT_APP_ID: &str = "1530764069965922354";
 const RETRY_AFTER: Duration = Duration::from_secs(30);
-const SITE_URL: &str = "https://millida.net/launcher";
-const DISCORD_URL: &str = "https://discord.gg/mcru";
-const PROFILE_BASE: &str = "https://millida.net/u/";
+const SITE_URL: &str = "https://github.com/kritikakumari0972-bit/mcpc-launcher";
+const DISCORD_URL: &str = "https://github.com/kritikakumari0972-bit/mcpc-launcher";
+const PROFILE_BASE: &str = "";
 
 /// Longest a caller waits for the socket before it is told what is known so
 /// far. The frontend gives presence two seconds before it beats without the
@@ -50,7 +49,7 @@ fn profile_url(slug: &str) -> Option<String> {
         && slug
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-');
-    if ok {
+    if ok && !PROFILE_BASE.is_empty() {
         Some(format!("{}{}", PROFILE_BASE, slug.to_ascii_lowercase()))
     } else {
         None
@@ -58,7 +57,7 @@ fn profile_url(slug: &str) -> Option<String> {
 }
 
 fn app_id() -> String {
-    std::env::var("MILLIDA_DISCORD_APP_ID").unwrap_or_else(|_| DEFAULT_APP_ID.to_string())
+    std::env::var("MCPC_DISCORD_APP_ID").unwrap_or_default()
 }
 
 static TX: Mutex<Option<Sender<Job>>> = Mutex::new(None);
