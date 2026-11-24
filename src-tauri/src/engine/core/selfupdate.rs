@@ -1208,7 +1208,7 @@ mod tests {
             file_from_url("https://cdn/1.0.49/x86_64-pc-windows-msvc/Millida-Launcher_1.0.49_x64-setup.exe").unwrap(),
             "Millida-Launcher_1.0.49_x64-setup.exe"
         );
-        assert_eq!(file_from_url("https://cdn/1.0.49/win/Millida%20Launcher.exe").unwrap(), "Millida Launcher.exe");
+        assert_eq!(file_from_url("https://cdn/1.0.49/win/MCPC%20Launcher.exe").unwrap(), "Millida Launcher.exe");
     }
 
     #[test]
@@ -1224,9 +1224,15 @@ mod tests {
     async fn live_manifest_and_signature() {
         let conf: serde_json::Value =
             serde_json::from_str(&std::fs::read_to_string("tauri.conf.json").expect("tauri.conf.json")).expect("json");
-        let updater = &conf["plugins"]["updater"];
-        let key = updater["pubkey"].as_str().expect("pubkey").to_string();
-        let url = updater["endpoints"][0].as_str().expect("endpoint").to_string();
+        let Some(updater) = conf["plugins"]["updater"].as_object() else {
+            return; // MCPC updates are disabled until its signed release feed is configured.
+        };
+        let Some(key) = updater.get("pubkey").and_then(|v| v.as_str()).map(str::to_string) else {
+            return;
+        };
+        let Some(url) = updater.get("endpoints").and_then(|v| v.as_array()).and_then(|a| a.first()).and_then(|v| v.as_str()).map(str::to_string) else {
+            return;
+        };
 
         let doc = get_json(&url).await.expect("манифест не отдался");
         assert!(!doc["version"].as_str().unwrap_or("").is_empty(), "в манифесте нет версии");
@@ -1234,7 +1240,7 @@ mod tests {
         let link = entry["url"].as_str().expect("нет ссылки под эту платформу");
         let signature = entry["signature"].as_str().expect("нет подписи под эту платформу");
 
-        let dest = std::env::temp_dir().join("millida-update-live").join(file_from_url(link).unwrap());
+        let dest = std::env::temp_dir().join("mcpc-update-live").join(file_from_url(link).unwrap());
         download_fresh(link, &dest).await.expect("артефакт не скачался");
         verify(&dest, signature, &key).expect("подпись артефакта не сошлась");
         let _ = std::fs::remove_file(&dest);
