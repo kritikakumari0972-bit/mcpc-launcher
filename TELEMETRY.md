@@ -2,7 +2,7 @@
 
 Russian version: [TELEMETRY.ru.md](TELEMETRY.ru.md)
 
-The launcher sends events about its own operation to `https://api.millida.net/v2/launcher/telemetry`: versions, hardware, launches, installs, errors, game crashes, screen transitions and button clicks. If you are signed in to a Millida account, the server ties this data to the account, so it is not anonymous statistics. It can be turned off in "Settings → Account → Usage statistics".
+When enabled, the launcher sends events about its own operation to the configured MCPC API at `/launcher/telemetry`: versions, hardware, launches, installs, errors, game crashes, screen transitions and button clicks. If you are signed in to a MCPC account, the server ties this data to the account, so it is not anonymous statistics. It can be turned off in "Settings → Account → Usage statistics".
 
 ## Why we need it
 
@@ -68,4 +68,4 @@ Error reports (`/errors`, [src/lib/crash.ts](src/lib/crash.ts)) contain a messag
 
 ## The in-game mod
 
-The Millida mod ([millida/millida-mod](https://github.com/millida/millida-mod), `ModTelemetry.java`) sends a session summary to `/launcher/mod-telemetry` no more often than once every 15 minutes: the versions of the mod, game, loader and Java, the OS, failure counters per subsystem, the number of worn and not-shown items, frames per second in the world (median and the lowest 5%) and what renders the world (Sodium, Embeddium, OptiFine or the game itself), to check whether the optimization set speeds the game up, its own install id (a separate `telemetry-id` file, different from the launcher's id), and whether a token is present. It contains no nickname, UUID or paths. The mod is turned off by the same switch, and also by a property or environment variable set to `off`.
+The MCPC mod ([millida/millida-mod](https://github.com/millida/millida-mod), `ModTelemetry.java`) sends a session summary to `/launcher/mod-telemetry` no more often than once every 15 minutes: the versions of the mod, game, loader and Java, the OS, failure counters per subsystem, the number of worn and not-shown items, frames per second in the world (median and the lowest 5%) and what renders the world (Sodium, Embeddium, OptiFine or the game itself), to check whether the optimization set speeds the game up, its own install id (a separate `telemetry-id` file, different from the launcher's id), and whether a token is present. It contains no nickname, UUID or paths. The mod is turned off by the same switch, and also by a property or environment variable set to `off`.
