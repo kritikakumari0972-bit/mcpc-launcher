@@ -1,10 +1,10 @@
-// Installs one file from the Millida catalog (mod, resource pack, shader, world) into a modpack.
-// Paid file: api.millida.net gives the link after it checks the purchase (Millida token). Downloads only from a short list of exact https hosts. The file is checked by hash.
+// Installs one file from the MCPC catalog (mod, resource pack, shader, world) into a modpack.
+// Paid file links are issued by the configured MCPC API after its purchase check. Downloads are limited to exact HTTPS hosts and checked by hash.
 use crate::engine::*;
 use serde_json::Value;
 use tauri::AppHandle;
 
-// A file of the Millida catalogue (a mod, resource pack, shader, data pack or
+// A file of the MCPC catalogue (a mod, resource pack, shader, data pack or
 // map uploaded by an author, free or paid) put into a build.
 //
 // The webview names the build, the item and the file id; the address is asked
@@ -17,16 +17,19 @@ const KINDS: [&str; 5] = ["mod", "resourcepack", "shader", "datapack", "world"];
 /// Hosts a signed or mirrored catalogue file may be served from. The answer is
 /// ours, but it is still an address the core writes into a game folder from.
 // The only hosts we accept a catalog file from. A link to any other address is rejected.
-// Exact hosts only, no suffix match: millida.net is multi-tenant (users upload files there), so a wildcard would trust any subdomain.
-const FILE_HOSTS: [&str; 7] = [
-    "garage.millida.net",
-    "cdn.millida.net",
-    "cdn.millida.trade",
+// Exact hosts only, no suffix match: catalogue hosts are configured explicitly; a wildcard would trust unrelated tenants.
+const FILE_HOSTS: &[&str] = &[
+    "api.mcpc.example",
+    "cdn.mcpc.example",
+    "packs.mcpc.example",
     "cdn.modrinth.com",
     "edge.forgecdn.net",
     "mediafilez.forgecdn.net",
-    "api.millida.net",
 ];
+const MCPC_CATALOG_DOWNLOAD_HOSTS: &str = match option_env!("MCPC_CATALOG_DOWNLOAD_HOSTS") {
+    Some(v) => v,
+    None => "",
+};
 
 pub(crate) fn catalog_file_url_allowed(raw: &str) -> bool {
     let Ok(url) = url::Url::parse(raw) else { return false };
@@ -34,7 +37,7 @@ pub(crate) fn catalog_file_url_allowed(raw: &str) -> bool {
         return false;
     }
     let host = url.host_str().unwrap_or("").to_ascii_lowercase();
-    FILE_HOSTS.contains(&host.as_str())
+    FILE_HOSTS.contains(&host.as_str()) || MCPC_CATALOG_DOWNLOAD_HOSTS.split(',').any(|item| item.trim().eq_ignore_ascii_case(&host))
 }
 
 /// Same shape as the server's check (`FILE_ID` in catalog-purchase.controller).
@@ -72,7 +75,7 @@ pub async fn install_catalog_file(
         return Err("Некорректный материал каталога".into());
     }
     let label = if title.trim().is_empty() { slug.clone() } else { title.chars().take(80).collect() };
-    let job = Job::start(job_key_content("millida", &profile, &kind, &slug), label.clone())?;
+    let job = Job::start(job_key_content("mcpc", &profile, &kind, &slug), label.clone())?;
     let res = install_catalog_file_job(&app, &job, &profile, &kind, &slug, &file_id, &label, sha1).await;
     job.finish(&app, res)
 }
@@ -92,7 +95,7 @@ async fn install_catalog_file_job(
         return Err("Сборка не найдена".into());
     }
     job.emit(app, 5.0, "Получаем ссылку…");
-    // If the user is logged in, we ask api.millida.net for the file link with the Millida token. Otherwise we use the public link.
+    // If the user is logged in, we ask the configured MCPC API for the file link with the MCPC account session. Otherwise we use the public link.
     let signed_in = millida_token().is_some_and(|t| !t.is_empty());
     let (url, name, size, sha512) = if signed_in {
         let link: Value =
@@ -109,7 +112,7 @@ async fn install_catalog_file_job(
         )
     } else {
         // Без входа — только бесплатный файл, счётным адресом каталога.
-        (format!("{}/catalog/files/{}/download", MILLIDA_API, file_id), String::new(), None, None)
+        (format!("{}/catalog/files/{}/download", MCPC_API_BASE, file_id), String::new(), None, None)
     };
     let fallback = format!("{}.{}", slug, if kind == "mod" { "jar" } else { "zip" });
     let fname = safe_file_name(if name.is_empty() { &fallback } else { &name })?;
@@ -170,14 +173,14 @@ mod tests {
 
     #[test]
     fn only_our_hosts_and_https_pass() {
-        assert!(catalog_file_url_allowed("https://garage.millida.net/a.jar?X-Amz=1"));
-        assert!(catalog_file_url_allowed("https://cdn.millida.trade/catalog/x.zip"));
+        assert!(catalog_file_url_allowed("https://packs.mcpc.example/a.jar?X-Amz=1"));
+        assert!(catalog_file_url_allowed("https://cdn.mcpc.example/catalog/x.zip"));
         assert!(catalog_file_url_allowed("https://cdn.modrinth.com/data/x.jar"));
-        assert!(!catalog_file_url_allowed("https://evil-user.millida.net/a.jar"));
-        assert!(!catalog_file_url_allowed("https://millida.net/a.jar"));
-        assert!(!catalog_file_url_allowed("http://garage.millida.net/a.jar"));
-        assert!(!catalog_file_url_allowed("https://millida.net.evil.io/a.jar"));
-        assert!(!catalog_file_url_allowed("https://evilmillida.net/a.jar"));
+        assert!(!catalog_file_url_allowed("https://evil-user.mcpc.example/a.jar"));
+        assert!(!catalog_file_url_allowed("https://mcpc.example/a.jar"));
+        assert!(!catalog_file_url_allowed("http://packs.mcpc.example/a.jar"));
+        assert!(!catalog_file_url_allowed("https://mcpc.example.evil.io/a.jar"));
+        assert!(!catalog_file_url_allowed("https://evilmcpc.example/a.jar"));
         assert!(!catalog_file_url_allowed("file:///etc/passwd"));
     }
 
