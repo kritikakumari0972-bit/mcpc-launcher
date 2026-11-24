@@ -276,12 +276,12 @@ pub fn set_app_icon(app: AppHandle, id: String) -> Result<(), String> {
     apply(&app, &id, png)
 }
 
-/// Только dev-сборка: `MILLIDA_APP_ICON=amethyst` ставит иконку на старте —
+/// Только dev-сборка: `MCPC_APP_ICON=amethyst` ставит иконку на старте —
 /// проверить переключение без входа в аккаунт.
 #[cfg(debug_assertions)]
 pub fn apply_from_env(app: &AppHandle) {
     // После старта: dev-сборка сама ставит свою иконку в Dock уже после setup.
-    if let Ok(id) = std::env::var("MILLIDA_APP_ICON") {
+    if let Ok(id) = std::env::var("MCPC_APP_ICON") {
         let app = app.clone();
         std::thread::spawn(move || {
             std::thread::sleep(std::time::Duration::from_secs(3));
