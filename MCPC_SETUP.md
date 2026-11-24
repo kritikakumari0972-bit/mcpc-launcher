@@ -19,6 +19,9 @@ This fork is deliberately separated from the original launcher's infrastructure.
 | MCPC_MOD_MANIFEST_PUBKEY | MCPC minisign public key (base64 text wrapper) | Empty (mod installs fail closed) |
 | MCPC_TEXTURE_HOSTS | Exact MCPC skin/texture hostnames, comma-separated | Empty |
 | MCPC_TEXTURE_HOST_SUFFIXES | MCPC-owned skin/texture DNS suffixes, comma-separated | Empty |
+| MCPC_CATALOG_DOWNLOAD_HOSTS | Exact MCPC catalog file hosts, comma-separated | .example hosts only |
+| MCPC_PACK_HOST | Exact modpack archive host | packs.mcpc.example |
+| MCPC_PACK_ICON_HOST | Exact modpack icon host | cdn.mcpc.example |
 | VITE_MCPC_UPDATES_ENABLED | Enable own signed update feed | false |
 | VITE_MCPC_REMOTE_UI_ENABLED | Enable remote signed MCPC screens | false |
 | VITE_MCPC_REMOTE_UI_BASE_URL | MCPC remote UI bundle root | https://ui.mcpc.example/launcher-ui |
@@ -41,6 +44,10 @@ Create an MCPC-owned Microsoft Entra application and set MCPC_MS_CLIENT_ID at co
 ## Optional cosmetics mod
 
 The upstream publisher's mod feed, CDN, signing key and kill-switch URL are not used. The mod installer fails closed until all MCPC-owned manifest/CDN/kill-switch URLs and a matching minisign public key are supplied at compile time. The default .example hosts are reserved and intentionally unavailable.
+
+## Catalog download hosts
+
+MCPC catalog files and modpacks are accepted only from exact HTTPS hostnames. Configure MCPC_CATALOG_DOWNLOAD_HOSTS, MCPC_PACK_HOST and MCPC_PACK_ICON_HOST to your own storage hosts before enabling the catalog. The `.example` defaults are reserved placeholders. Public Modrinth and CurseForge CDN hosts remain separately allowlisted where the relevant integration requires them.
 
 ## Party voice
 
