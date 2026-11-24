@@ -31,7 +31,7 @@ export interface UpdateInfo {
   install: () => Promise<void>
 }
 
-export const DOWNLOAD_PAGE = 'https://millida.net/launcher'
+export const DOWNLOAD_PAGE = 'https://github.com/kritikakumari0972-bit/mcpc-launcher/releases'
 
 const FAILED_KEY = 'm-upd-failed'
 /// The version whose patch update did not install: the full installer is taken for it from then on, in every session.
@@ -163,7 +163,7 @@ function afterQuiet(run: () => void) {
   setTimeout(attempt, QUIET_FIRST_MS)
 }
 
-const updatesAllowed = () => hasTauri() && !import.meta.env.DEV
+// Updates stay off until MCPC has its own signed release feed and signing key. Never query the original publisher's feed.\nconst updatesAllowed = () => hasTauri() && !import.meta.env.DEV && import.meta.env.VITE_MCPC_UPDATES_ENABLED === 'true'
 
 /// Flatpak updates itself and mounts /app read-only, so the fallback channel cannot install there.
 let managedOutside: boolean | null = null
@@ -177,7 +177,7 @@ async function updatesReady(): Promise<boolean> {
   return updatesAllowed() && !(await updatesManagedOutside())
 }
 
-const FLATPAK_UPDATE_COMMAND = 'flatpak update net.millida.launcher'
+const FLATPAK_UPDATE_COMMAND = 'flatpak update io.github.kritikakumari0972.mcpc_launcher'
 
 async function managedOutsideOnly(): Promise<boolean> {
   return updatesAllowed() && (await updatesManagedOutside())
