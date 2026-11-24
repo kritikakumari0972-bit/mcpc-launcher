@@ -1205,7 +1205,7 @@ mod tests {
     #[test]
     fn takes_file_name_from_url() {
         assert_eq!(
-            file_from_url("https://cdn/1.0.49/x86_64-pc-windows-msvc/Millida-Launcher_1.0.49_x64-setup.exe").unwrap(),
+            file_from_url("https://cdn/1.0.49/x86_64-pc-windows-msvc/MCPC-Launcher_1.0.49_x64-setup.exe").unwrap(),
             "MCPC-Launcher_1.0.49_x64-setup.exe"
         );
         assert_eq!(file_from_url("https://cdn/1.0.49/win/MCPC%20Launcher.exe").unwrap(), "MCPC Launcher.exe");
