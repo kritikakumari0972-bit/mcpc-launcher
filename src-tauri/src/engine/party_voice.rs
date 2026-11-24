@@ -225,7 +225,7 @@ fn relay_host_allowed(host: &str, configured_domains: &str) -> bool {
         .split(',')
         .map(|d| d.trim().trim_end_matches('.').to_ascii_lowercase())
         .filter(|d| !d.is_empty() && d.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'.' || c == b'-'))
-        .any(|d| host == d || host.ends_with(&format!(".{d}")))
+        .any(|d| host == d.as_str() || host.ends_with(&format!(".{d}")))
 }
 
 /// Defence in depth behind the host allowlist: the client must never be aimed
