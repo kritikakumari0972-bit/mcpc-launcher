@@ -431,7 +431,7 @@ mod tests {
     fn profile_button_stays_disabled_until_mcpc_profile_base_exists() {
         let cases: [(&str, Option<&str>); 7] = [
             ("danielgrash", None),
-            ("DanielGrash", Some("https://millida.net/u/danielgrash")),
+            ("DanielGrash", None),
             ("some_nick-2", None),
             ("", None),
             ("../admin", None),
