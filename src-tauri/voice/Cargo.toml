@@ -1,7 +1,7 @@
 [package]
 name = "millida-voice"
 version = "0.1.0"
-description = "Party voice client for the Millida voice relay"
+description = "Party voice client for the MCPC voice service"
 edition = "2021"
 license = "GPL-3.0-only"
 publish = false
