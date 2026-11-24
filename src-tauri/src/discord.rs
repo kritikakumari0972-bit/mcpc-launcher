@@ -2,7 +2,7 @@
 // It does not go to the internet itself: only the running Discord app gets the data (modpack name, server, join link). The application id below is public.
 //! Discord Rich Presence over the local Discord IPC socket. The application id
 //! controls the displayed app name and the asset images; override it with
-//! `MILLIDA_DISCORD_APP_ID`. Failures are non-fatal and retried no more often
+//! `MCPC_DISCORD_APP_ID`. Failures are non-fatal and retried no more often
 //! than `RETRY_AFTER`.
 //!
 //! The socket is owned by one worker thread and never touched by a caller. A
@@ -26,6 +26,10 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 // Public application id from the Discord Developer Portal. Discord needs it to show the name and pictures. It is not a secret.
+const MCPC_DISCORD_APP_ID: &str = match option_env!("MCPC_DISCORD_APP_ID") {
+    Some(id) => id,
+    None => "",
+};
 const RETRY_AFTER: Duration = Duration::from_secs(30);
 const SITE_URL: &str = "https://github.com/kritikakumari0972-bit/mcpc-launcher";
 const DISCORD_URL: &str = "https://github.com/kritikakumari0972-bit/mcpc-launcher";
@@ -57,7 +61,7 @@ fn profile_url(slug: &str) -> Option<String> {
 }
 
 fn app_id() -> String {
-    std::env::var("MCPC_DISCORD_APP_ID").unwrap_or_default()
+    std::env::var("MCPC_DISCORD_APP_ID").unwrap_or_else(|_| MCPC_DISCORD_APP_ID.to_string())
 }
 
 static TX: Mutex<Option<Sender<Job>>> = Mutex::new(None);
