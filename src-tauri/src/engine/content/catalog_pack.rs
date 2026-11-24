@@ -1,4 +1,4 @@
-// Installs a ready modpack from the Millida catalog: the card and the archive link come from api.millida.net, the archive is downloaded from garage.millida.net and unpacked into the modpack folder.
+// Installs a ready modpack from the MCPC catalog: the card and the archive link come from api.mcpc.example, the archive is downloaded from packs.mcpc.example and unpacked into the modpack folder.
 // Launcher service files are dropped from the foreign archive, except the launch description that the catalog check reads.
 use super::pack_link::{storage_refused, PackLink};
 use super::{pack_delta, pack_install};
@@ -914,7 +914,7 @@ mod tests {
     /// to download gigabytes from it and unpack them into a game folder.
     #[test]
     fn only_our_storage_may_serve_a_pack() {
-        let good = "https://garage.millida.net/millida-packs/catalog/packs/a/a-1-client.zip?X-Amz-Signature=x";
+        let good = "https://garage.millida.net/mcpc-packs/catalog/packs/a/a-1-client.zip?X-Amz-Signature=x";
         assert!(pack_url_allowed(good), "«{good}» — обычная подписанная ссылка хранилища");
         for bad in [
             "http://garage.millida.net/x.zip",
